@@ -1,0 +1,17 @@
+export const fightfocusInitial = [
+  { id: 1, code: "BUG-04", description: "Corriger le seuil de mots dans fix-articles-audit.mjs", priorite: "P1", statut: "a_faire" },
+  { id: 2, code: "BUG-05", description: "Passer la redirection K-1 en permanent:true dans vercel.json", priorite: "P1", statut: "a_faire" },
+  { id: 3, code: "BUG-02", description: "Mettre à jour les classements UFC depuis ufc.com/rankings", priorite: "P1", statut: "a_faire" },
+  { id: 4, code: "BUG-07", description: "Remplir les records W-L-D manquants dans les classements", priorite: "P1", statut: "a_faire" },
+  { id: 5, code: "BUG-03", description: "Réécrire l'article entrainement-intervalles-kickboxing.md", priorite: "P1", statut: "a_faire" },
+  { id: 6, code: "BUG-06", description: "Modifier generate-article.mjs pour ne pas publier le fallback silencieusement", priorite: "P1", statut: "a_faire" },
+  { id: 7, code: "SEO-04", description: "Remplacer background-image hero par vraie balise img dans slug.astro", priorite: "P2", statut: "a_faire" },
+  { id: 8, code: "BUG-11", description: "Refactoriser copyLink sans exposition globale dans slug.astro", priorite: "P2", statut: "a_faire" },
+  { id: 9, code: "BUG-08", description: "Vérifier existence de public/images/banners/guide.webp", priorite: "P2", statut: "a_faire" },
+  { id: 10, code: "BUG-09", description: "Décider du sort de autres-disciplines.astro", priorite: "P2", statut: "a_faire" },
+  { id: 11, code: "BUG-10", description: "Retirer le widget événements hardcodé sur l'accueil", priorite: "P2", statut: "a_faire" },
+  { id: 12, code: "FEAT-03", description: "Vérifier search.astro vs recherche.astro — supprimer le doublon", priorite: "P2", statut: "a_faire" },
+  { id: 13, code: "SEO-02", description: "Améliorer les titres des pages discipline", priorite: "P2", statut: "a_faire" },
+  { id: 14, code: "SEO-06", description: "Enrichir l'article kickboxing/intervalles (450 mots → 800 mots)", priorite: "P2", statut: "a_faire" },
+  { id: 15, code: "FEAT-04", description: "Écrire article équipement : Guide gants de boxe débutant", priorite: "P2", statut: "a_faire" },
+];

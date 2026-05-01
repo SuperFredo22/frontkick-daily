@@ -1,0 +1,185 @@
+import { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { computeStreak, getMonthStats, getLast30DaysStats, getCigaretteFreeDays, getJournalForDate } from '../utils/stats';
+import Card from '../components/Card';
+import Modal from '../components/Modal';
+
+function StatBox({ label, value, sub, color }) {
+  return (
+    <div className="flex-1 bg-white rounded-card shadow-card p-3 text-center">
+      <div className="text-2xl font-bold" style={{ color }}>{value}</div>
+      <div className="text-xs font-medium text-gray-700 mt-0.5">{label}</div>
+      {sub && <div className="text-[10px] text-gray-400 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+export default function Stats() {
+  const [streak, setStreak] = useState(0);
+  const [monthStats, setMonthStats] = useState({ tiktok: 0, fightfocus: 0, marque: 0 });
+  const [daily, setDaily] = useState([]);
+  const [cigFree, setCigFree] = useState(0);
+  const [detailDate, setDetailDate] = useState(null);
+  const [detailJournal, setDetailJournal] = useState(null);
+
+  useEffect(() => {
+    setStreak(computeStreak());
+    setMonthStats(getMonthStats());
+    setDaily(getLast30DaysStats());
+    setCigFree(getCigaretteFreeDays());
+  }, []);
+
+  const handleBarClick = (data) => {
+    if (!data?.activePayload?.[0]?.payload?.date) return;
+    const dateStr = data.activePayload[0].payload.date;
+    const journal = getJournalForDate(dateStr);
+    setDetailDate(dateStr);
+    setDetailJournal(journal);
+  };
+
+  const chartData = daily.map(d => ({
+    ...d,
+    name: d.date.slice(5),
+  }));
+
+  return (
+    <div className="flex flex-col gap-4 px-4 pt-4 pb-nav">
+      <h1 className="text-xl font-bold text-gray-900">Statistiques</h1>
+
+      {/* Streak */}
+      <Card className="flex items-center gap-3">
+        <div className="text-4xl">🔥</div>
+        <div>
+          <div className="text-3xl font-bold" style={{ color: '#C0392B' }}>{streak}</div>
+          <div className="text-sm text-gray-500">jours consécutifs avec au moins 1 tâche</div>
+        </div>
+      </Card>
+
+      {/* Monthly stats */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Ce mois-ci</h2>
+        <div className="flex gap-2">
+          <StatBox label="Vidéos" value={monthStats.tiktok} color="#C0392B" sub="publiées" />
+          <StatBox label="FightFocus" value={monthStats.fightfocus} color="#00b4d8" sub="tâches" />
+          <StatBox label="Marque" value={monthStats.marque} color="#E67E22" sub="actions" />
+        </div>
+      </section>
+
+      {/* Prières 30 jours */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Prières — 30 derniers jours
+        </h2>
+        <Card className="p-3">
+          <ResponsiveContainer width="100%" height={100}>
+            <BarChart data={chartData} onClick={handleBarClick} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
+              <Tooltip
+                contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                formatter={(v) => [v, 'Prières']}
+              />
+              <Bar dataKey="prieres" fill="#C0392B" radius={[3, 3, 0, 0]} maxBarSize={20} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      </section>
+
+      {/* Sport 30 jours */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Sport — 30 derniers jours
+        </h2>
+        <Card className="p-3">
+          <ResponsiveContainer width="100%" height={80}>
+            <BarChart data={chartData} onClick={handleBarClick} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
+              <Tooltip
+                contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                formatter={(v) => [v ? 'Oui' : 'Non', 'Sport']}
+              />
+              <Bar dataKey="sport" fill="#00b4d8" radius={[3, 3, 0, 0]} maxBarSize={20} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      </section>
+
+      {/* Cigarettes */}
+      <Card className="flex items-center gap-3">
+        <div className="text-3xl">🚭</div>
+        <div>
+          <div className="text-2xl font-bold text-green-500">{cigFree}</div>
+          <div className="text-sm text-gray-500">jours sans cigarette sur les 30 derniers</div>
+        </div>
+      </Card>
+
+      {/* Activité globale */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Activité globale — 30 jours
+        </h2>
+        <Card className="p-3">
+          <ResponsiveContainer width="100%" height={100}>
+            <LineChart data={chartData} onClick={handleBarClick} margin={{ top: 4, right: 4, left: -30, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
+              <Tooltip
+                contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                formatter={(v) => [v, 'Tâches']}
+              />
+              <Line type="monotone" dataKey="tachesFaites" stroke="#C0392B" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+          <p className="text-[10px] text-gray-400 text-center mt-1">Cliquer sur un point pour voir le détail</p>
+        </Card>
+      </section>
+
+      {/* Detail modal */}
+      <Modal
+        open={!!detailDate}
+        onClose={() => { setDetailDate(null); setDetailJournal(null); }}
+        title={detailDate ? new Date(detailDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
+        footer={
+          <button
+            onClick={() => { setDetailDate(null); setDetailJournal(null); }}
+            className="w-full py-2.5 rounded-lg bg-gray-100 text-gray-600 font-medium text-sm"
+          >
+            Fermer
+          </button>
+        }
+      >
+        {detailJournal ? (
+          <div className="flex flex-col gap-3">
+            {detailJournal.taches?.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 mb-2">Tâches</p>
+                {detailJournal.taches.map((t, i) => (
+                  <div key={i} className="flex items-start gap-2 mb-1.5">
+                    <span className="text-sm">{t.statut === 'fait' ? '✅' : '🔄'}</span>
+                    <span className="text-sm text-gray-700 leading-snug">{t.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {detailJournal.habitudes && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 mb-2">Habitudes</p>
+                <div className="flex gap-4 text-sm text-gray-600">
+                  <span>🙏 {detailJournal.habitudes.prieres || 0}</span>
+                  <span>{detailJournal.habitudes.sport ? '🥊 ✓' : '🥊 —'}</span>
+                  <span>🚬 {detailJournal.habitudes.cigarettes || 0}</span>
+                </div>
+                {detailJournal.habitudes.note && (
+                  <p className="text-sm text-gray-600 mt-2 italic">{detailJournal.habitudes.note}</p>
+                )}
+              </div>
+            )}
+            {(!detailJournal.taches?.length && !detailJournal.habitudes) && (
+              <p className="text-sm text-gray-400 italic">Aucune donnée pour cette journée.</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 italic">Aucune donnée pour cette journée.</p>
+        )}
+      </Modal>
+    </div>
+  );
+}
