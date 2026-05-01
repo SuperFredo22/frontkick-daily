@@ -16,7 +16,7 @@ function StatBox({ label, value, sub, color }) {
 
 export default function Stats() {
   const [streak, setStreak] = useState(0);
-  const [monthStats, setMonthStats] = useState({ tiktok: 0, fightfocus: 0, marque: 0 });
+  const [monthStats, setMonthStats] = useState({ tiktok: 0, fightfocus: 0, marque: 0, projets: {} });
   const [daily, setDaily] = useState([]);
   const [cigFree, setCigFree] = useState(0);
   const [detailDate, setDetailDate] = useState(null);
@@ -32,15 +32,12 @@ export default function Stats() {
   const handleBarClick = (data) => {
     if (!data?.activePayload?.[0]?.payload?.date) return;
     const dateStr = data.activePayload[0].payload.date;
-    const journal = getJournalForDate(dateStr);
     setDetailDate(dateStr);
-    setDetailJournal(journal);
+    setDetailJournal(getJournalForDate(dateStr));
   };
 
-  const chartData = daily.map(d => ({
-    ...d,
-    name: d.date.slice(5),
-  }));
+  const chartData = daily.map(d => ({ ...d, name: d.date.slice(5) }));
+  const projetEntries = Object.entries(monthStats.projets || {});
 
   return (
     <div className="flex flex-col gap-4 px-4 pt-4 pb-nav">
@@ -63,6 +60,21 @@ export default function Stats() {
           <StatBox label="FightFocus" value={monthStats.fightfocus} color="#00b4d8" sub="tâches" />
           <StatBox label="Marque" value={monthStats.marque} color="#E67E22" sub="actions" />
         </div>
+
+        {/* Project stats */}
+        {projetEntries.length > 0 && (
+          <div className="flex flex-col gap-2 mt-2">
+            {projetEntries.map(([id, { count, nom }]) => (
+              <div key={id} className="bg-white rounded-card shadow-card px-4 py-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">📁 {nom}</span>
+                <div className="text-right">
+                  <span className="text-lg font-bold" style={{ color: '#8E44AD' }}>{count}</span>
+                  <span className="text-xs text-gray-400 ml-1">tâche{count !== 1 ? 's' : ''}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Prières 30 jours */}
@@ -74,10 +86,8 @@ export default function Stats() {
           <ResponsiveContainer width="100%" height={100}>
             <BarChart data={chartData} onClick={handleBarClick} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
               <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
-              <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-                formatter={(v) => [v, 'Prières']}
-              />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                formatter={(v) => [v, 'Prières']} />
               <Bar dataKey="prieres" fill="#C0392B" radius={[3, 3, 0, 0]} maxBarSize={20} />
             </BarChart>
           </ResponsiveContainer>
@@ -93,10 +103,8 @@ export default function Stats() {
           <ResponsiveContainer width="100%" height={80}>
             <BarChart data={chartData} onClick={handleBarClick} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
               <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
-              <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-                formatter={(v) => [v ? 'Oui' : 'Non', 'Sport']}
-              />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                formatter={(v) => [v ? 'Oui' : 'Non', 'Sport']} />
               <Bar dataKey="sport" fill="#00b4d8" radius={[3, 3, 0, 0]} maxBarSize={20} />
             </BarChart>
           </ResponsiveContainer>
@@ -121,10 +129,8 @@ export default function Stats() {
           <ResponsiveContainer width="100%" height={100}>
             <LineChart data={chartData} onClick={handleBarClick} margin={{ top: 4, right: 4, left: -30, bottom: 0 }}>
               <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
-              <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-                formatter={(v) => [v, 'Tâches']}
-              />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                formatter={(v) => [v, 'Tâches']} />
               <Line type="monotone" dataKey="tachesFaites" stroke="#C0392B" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -136,12 +142,10 @@ export default function Stats() {
       <Modal
         open={!!detailDate}
         onClose={() => { setDetailDate(null); setDetailJournal(null); }}
-        title={detailDate ? new Date(detailDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
+        title={detailDate ? new Date(detailDate + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
         footer={
-          <button
-            onClick={() => { setDetailDate(null); setDetailJournal(null); }}
-            className="w-full py-2.5 rounded-lg bg-gray-100 text-gray-600 font-medium text-sm"
-          >
+          <button onClick={() => { setDetailDate(null); setDetailJournal(null); }}
+            className="w-full py-2.5 rounded-lg bg-gray-100 text-gray-600 font-medium text-sm">
             Fermer
           </button>
         }

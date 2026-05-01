@@ -3,6 +3,13 @@ import { tiktokInitial } from '../data/tiktok';
 import { fightfocusInitial } from '../data/fightfocus';
 import { marqueInitial } from '../data/marque';
 
+const INACTIVE_STATUTS = ['publiee', 'fait', 'deja_fait'];
+const ACTIVE_STATUTS = {
+  tiktok: ['a_tourner'],
+  fightfocus: ['a_faire'],
+  marque: ['a_faire'],
+};
+
 export function useTikTok() {
   return useStorage('tiktok', tiktokInitial);
 }
@@ -31,18 +38,37 @@ export function useAllBanques() {
     }
   };
 
-  const getNextItem = (banque, reportedToday) => {
+  const markDejaFait = (banque, id) => {
+    if (banque === 'tiktok') {
+      setTiktok(prev => prev.map(item => item.id === id ? { ...item, statut: 'deja_fait' } : item));
+    } else if (banque === 'fightfocus') {
+      setFightFocus(prev => prev.map(item => item.id === id ? { ...item, statut: 'deja_fait' } : item));
+    } else if (banque === 'marque') {
+      setMarque(prev => prev.map(item => item.id === id ? { ...item, statut: 'deja_fait' } : item));
+    }
+  };
+
+  const getNextItem = (banque, skippedToday) => {
     let items;
     if (banque === 'tiktok') items = tiktok;
     else if (banque === 'fightfocus') items = fightfocus;
     else items = marque;
 
-    const activeStatut = banque === 'tiktok' ? ['a_tourner'] : ['a_faire'];
+    const activeStatut = ACTIVE_STATUTS[banque];
     return items.find(item =>
       activeStatut.includes(item.statut) &&
-      !reportedToday.includes(`${banque}_${item.id}`)
+      !skippedToday.includes(`${banque}_${item.id}`)
     ) || null;
   };
 
-  return { tiktok, setTiktok, fightfocus, setFightFocus, marque, setMarque, markDone, getNextItem };
+  const hasAvailableItems = (banque) => {
+    let items;
+    if (banque === 'tiktok') items = tiktok;
+    else if (banque === 'fightfocus') items = fightfocus;
+    else items = marque;
+    const activeStatut = ACTIVE_STATUTS[banque];
+    return items.some(item => activeStatut.includes(item.statut));
+  };
+
+  return { tiktok, setTiktok, fightfocus, setFightFocus, marque, setMarque, markDone, markDejaFait, getNextItem, hasAvailableItems };
 }

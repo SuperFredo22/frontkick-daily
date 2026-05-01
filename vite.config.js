@@ -8,6 +8,6 @@ export default defineConfig({
     sourcemap: false,
   },
   server: {
-    port: 5173,
+    port: parseInt(process.env.PORT || '5173'),
   },
 })
