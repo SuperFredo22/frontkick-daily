@@ -4,8 +4,10 @@ import { useJournal, useReporteAujourdhui } from '../hooks/useJournal';
 import { useAllBanques } from '../hooks/useBanques';
 import { useProjets, getNextProjetTask, getActiveProjects } from '../hooks/useProjets';
 import { useAgenda } from '../hooks/useAgenda';
+import { getConsecutiveNoSportDays } from '../utils/stats';
 import SuggestionCard from '../components/SuggestionCard';
 import Card from '../components/Card';
+import SportModule from '../components/sport/SportModule';
 
 function makeItemLabel(banque, item) {
   if (banque === 'tiktok') return item.titre;
@@ -118,6 +120,16 @@ export default function Aujourdhui() {
     setReporte(prev => [...(prev || []), `projet_${projet.id}_${tache.id}`]);
   };
 
+  // ─── Sport ────────────────────────────────────────────────────────────────
+
+  const handleSportSave = (sportData) => {
+    setJournal(prev => ({
+      ...prev,
+      sport: sportData,
+      habitudes: { ...(prev.habitudes || {}), sport: true },
+    }));
+  };
+
   // ─── Habitudes ────────────────────────────────────────────────────────────
 
   const updateHabitude = (field, value) => {
@@ -137,6 +149,7 @@ export default function Aujourdhui() {
     setShowBonusInput(false);
   };
 
+  const noSportDays = getConsecutiveNoSportDays();
   const hab = journal?.habitudes || { prieres: 0, sport: false, cigarettes: 0, note: '' };
   const tachesFaites   = (journal?.taches || []).filter(t => t.statut === 'fait');
   const tachesReportees = (journal?.taches || []).filter(t => t.statut === 'reporte');
@@ -160,6 +173,16 @@ export default function Aujourdhui() {
           {isYesterday ? '← Aujourd\'hui' : 'Hier'}
         </button>
       </div>
+
+      {/* Nudge sport */}
+      {noSportDays >= 3 && !journal?.sport && !journal?.habitudes?.sport && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-2xl">⚠️</span>
+          <p className="text-sm text-amber-800 font-medium">
+            {noSportDays} jours sans sport — c'est le moment de bouger !
+          </p>
+        </div>
+      )}
 
       {/* Suggestions */}
       <section>
@@ -282,14 +305,12 @@ export default function Aujourdhui() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between py-2 border-b border-gray-50">
-            <span className="text-sm font-medium text-gray-700">🥊 Sport</span>
-            <button onClick={() => updateHabitude('sport', !hab.sport)}
-              className="w-12 h-6 rounded-full transition-colors relative"
-              style={{ background: hab.sport ? '#C0392B' : '#E5E7EB' }}>
-              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${hab.sport ? 'translate-x-6' : 'translate-x-0.5'}`} />
-            </button>
-          </div>
+          <SportModule
+            journal={journal}
+            onSportSave={handleSportSave}
+            setAgenda={setAgenda}
+            viewDate={formatDate(viewDate)}
+          />
 
           <div className="flex items-center justify-between py-2 border-b border-gray-50">
             <span className="text-sm font-medium text-gray-700">🚬 Cigarettes</span>
@@ -350,7 +371,7 @@ export default function Aujourdhui() {
             )}
             <div className="mt-3 pt-3 border-t border-gray-50 flex gap-4 text-xs text-gray-500">
               <span>🙏 {hab.prieres || 0} prières</span>
-              <span>{hab.sport ? '🥊 Sport ✓' : '🥊 Sport —'}</span>
+              <span>{(journal?.sport || hab.sport) ? `🥊 ${journal?.sport?.seance_nom || 'Sport ✓'}` : '🥊 Sport —'}</span>
               <span>🚬 {hab.cigarettes || 0}</span>
             </div>
           </Card>

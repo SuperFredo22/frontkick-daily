@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { computeStreak, getMonthStats, getLast30DaysStats, getCigaretteFreeDays, getJournalForDate } from '../utils/stats';
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
+import { computeStreak, getMonthStats, getLast30DaysStats, getCigaretteFreeDays, getJournalForDate, getSportMonthStats, computeSportStreak, getSportLast30Days } from '../utils/stats';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 
@@ -21,12 +21,18 @@ export default function Stats() {
   const [cigFree, setCigFree] = useState(0);
   const [detailDate, setDetailDate] = useState(null);
   const [detailJournal, setDetailJournal] = useState(null);
+  const [sportMonth, setSportMonth] = useState({ club: 0, gym: 0, maison: 0, autre: 0, total: 0, totalDuree: 0, topType: null });
+  const [sportStreak, setSportStreak] = useState(0);
+  const [sportDaily, setSportDaily] = useState([]);
 
   useEffect(() => {
     setStreak(computeStreak());
     setMonthStats(getMonthStats());
     setDaily(getLast30DaysStats());
     setCigFree(getCigaretteFreeDays());
+    setSportMonth(getSportMonthStats());
+    setSportStreak(computeSportStreak());
+    setSportDaily(getSportLast30Days());
   }, []);
 
   const handleBarClick = (data) => {
@@ -37,6 +43,9 @@ export default function Stats() {
   };
 
   const chartData = daily.map(d => ({ ...d, name: d.date.slice(5) }));
+  const sportChartData = sportDaily.map(d => ({ ...d, name: d.date.slice(5) }));
+
+  const TYPE_LABELS = { club: 'Club MMA', gym: 'Gym', maison: 'Maison', autre: 'Autre' };
   const projetEntries = Object.entries(monthStats.projets || {});
 
   return (
@@ -119,6 +128,68 @@ export default function Stats() {
           <div className="text-sm text-gray-500">jours sans cigarette sur les 30 derniers</div>
         </div>
       </Card>
+
+      {/* Sport ce mois-ci */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Sport ce mois-ci</h2>
+        <div className="flex gap-2 mb-2">
+          <StatBox label="Séances" value={sportMonth.total} color="#27AE60" />
+          <StatBox label="Minutes" value={sportMonth.totalDuree} color="#27AE60" sub="total" />
+          <StatBox label="Streak" value={sportStreak} color="#27AE60" sub="jours" />
+        </div>
+        {sportMonth.total > 0 && (
+          <div className="flex gap-2">
+            {sportMonth.club > 0 && (
+              <div className="flex-1 bg-white rounded-card shadow-card px-3 py-2 text-center">
+                <div className="text-lg font-bold" style={{ color: '#27AE60' }}>{sportMonth.club}</div>
+                <div className="text-[10px] text-gray-500">🥊 Club</div>
+              </div>
+            )}
+            {sportMonth.gym > 0 && (
+              <div className="flex-1 bg-white rounded-card shadow-card px-3 py-2 text-center">
+                <div className="text-lg font-bold" style={{ color: '#27AE60' }}>{sportMonth.gym}</div>
+                <div className="text-[10px] text-gray-500">🏋️ Gym</div>
+              </div>
+            )}
+            {sportMonth.maison > 0 && (
+              <div className="flex-1 bg-white rounded-card shadow-card px-3 py-2 text-center">
+                <div className="text-lg font-bold" style={{ color: '#27AE60' }}>{sportMonth.maison}</div>
+                <div className="text-[10px] text-gray-500">🏠 Maison</div>
+              </div>
+            )}
+            {sportMonth.autre > 0 && (
+              <div className="flex-1 bg-white rounded-card shadow-card px-3 py-2 text-center">
+                <div className="text-lg font-bold" style={{ color: '#27AE60' }}>{sportMonth.autre}</div>
+                <div className="text-[10px] text-gray-500">✅ Autre</div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Sport 30 jours */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Sport — 30 derniers jours
+        </h2>
+        <Card className="p-3">
+          <ResponsiveContainer width="100%" height={80}>
+            <BarChart data={sportChartData} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                formatter={(v, name, props) => [
+                  props.payload.did ? (props.payload.duree ? `${props.payload.duree} min` : 'Oui') : 'Non',
+                  'Sport',
+                ]} />
+              <Bar dataKey="did" radius={[3, 3, 0, 0]} maxBarSize={20}>
+                {sportChartData.map((entry, i) => (
+                  <Cell key={i} fill={entry.did ? '#27AE60' : '#E5E7EB'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      </section>
 
       {/* Activité globale */}
       <section>
