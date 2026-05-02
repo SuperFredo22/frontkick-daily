@@ -1,31 +1,99 @@
 import { useState } from 'react';
+import Modal from '../Modal';
 import SeanceSelector from './SeanceSelector';
 import SeanceEnCours from './SeanceEnCours';
 import SeanceRecap from './SeanceRecap';
 
-const SPORT_TYPES = [
-  { key: 'club',   emoji: '🥊', label: 'Club MMA' },
-  { key: 'gym',    emoji: '🏋️', label: 'Gym' },
-  { key: 'maison', emoji: '🏠', label: 'Maison' },
-  { key: 'autre',  emoji: '✅', label: 'Autre' },
-];
-
 const TYPE_LABELS = { club: 'Club MMA', gym: 'Gym', maison: 'Maison', autre: 'Autre' };
 
-function SportDoneRow({ sport }) {
-  const label = sport.seance_nom || TYPE_LABELS[sport.type] || 'Sport';
+function ClubModal({ open, onClose, onSave }) {
+  const [notes, setNotes] = useState('');
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="🥊 Club MMA"
+      footer={
+        <button
+          onClick={() => { onSave(notes); setNotes(''); }}
+          className="w-full py-2.5 rounded-lg text-white font-medium text-sm"
+          style={{ background: '#27AE60' }}
+        >
+          Enregistrer
+        </button>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <p className="text-sm text-gray-600">Séance au club enregistrée ✓</p>
+        <div>
+          <p className="text-xs font-semibold text-gray-500 mb-1.5">Ce qu'on a travaillé aujourd'hui (optionnel)</p>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Boxe, sparring, clinch…"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none bg-gray-50"
+            rows={3}
+          />
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function AutreModal({ open, onClose, onSave }) {
+  const [texte, setTexte] = useState('');
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="✅ Autre sport"
+      footer={
+        <button
+          onClick={() => { if (texte.trim()) { onSave(texte.trim()); setTexte(''); } }}
+          disabled={!texte.trim()}
+          className="w-full py-2.5 rounded-lg text-white font-medium text-sm disabled:opacity-40"
+          style={{ background: '#27AE60' }}
+        >
+          Enregistrer
+        </button>
+      }
+    >
+      <div>
+        <p className="text-xs font-semibold text-gray-500 mb-1.5">Quelle activité ?</p>
+        <input
+          autoFocus
+          value={texte}
+          onChange={e => setTexte(e.target.value)}
+          placeholder="Course, vélo, natation…"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50"
+        />
+      </div>
+    </Modal>
+  );
+}
+
+function SportDoneRow({ sport, onClear }) {
+  const label = sport.seance_nom || sport.notes || TYPE_LABELS[sport.type] || 'Sport';
   return (
     <div className="flex items-center justify-between py-2 border-b border-gray-50">
       <span className="text-sm font-medium text-gray-700">🥊 Sport</span>
-      <span className="text-sm font-medium text-green-600">
-        ✓ {label}{sport.duree_reelle ? ` · ${sport.duree_reelle} min` : ''}
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-green-600">
+          ✓ {label}{sport.duree_reelle ? ` · ${sport.duree_reelle} min` : ''}
+        </span>
+        <button
+          onClick={onClear}
+          className="text-xs text-gray-400 px-2 py-1 rounded-lg bg-gray-100 active:bg-gray-200"
+        >
+          ↩️ Modifier
+        </button>
+      </div>
     </div>
   );
 }
 
-export default function SportModule({ journal, onSportSave, setAgenda, viewDate }) {
-  const [step, setStep] = useState(null); // null | 'select' | 'training' | 'recap'
+export default function SportModule({ journal, onSportSave, onSportClear, setAgenda, viewDate }) {
+  const [step, setStep] = useState(null); // null | 'club' | 'autre' | 'select' | 'training' | 'recap'
   const [type, setType] = useState(null);
   const [seance, setSeance] = useState(null);
   const [recapData, setRecapData] = useState(null);
@@ -33,16 +101,28 @@ export default function SportModule({ journal, onSportSave, setAgenda, viewDate 
   const sportDone = journal?.sport;
   const legacySport = !sportDone && journal?.habitudes?.sport;
 
-  if (sportDone) return <SportDoneRow sport={sportDone} />;
-  if (legacySport) return <SportDoneRow sport={{ type: 'autre' }} />;
+  if (sportDone) return <SportDoneRow sport={sportDone} onClear={onSportClear} />;
+  if (legacySport) return <SportDoneRow sport={{ type: 'autre' }} onClear={onSportClear} />;
 
   const handleType = (key) => {
     setType(key);
-    if (key === 'autre') {
-      onSportSave({ type: 'autre', duree_reelle: 0 });
+    if (key === 'club') {
+      setStep('club');
+    } else if (key === 'autre') {
+      setStep('autre');
     } else {
       setStep('select');
     }
+  };
+
+  const handleClubSave = (notes) => {
+    onSportSave({ type: 'club', duree_reelle: 0, notes });
+    setStep(null);
+  };
+
+  const handleAutreSave = (texte) => {
+    onSportSave({ type: 'autre', duree_reelle: 0, notes: texte });
+    setStep(null);
   };
 
   const handleSave = (notes, timeSlot) => {
@@ -64,6 +144,13 @@ export default function SportModule({ journal, onSportSave, setAgenda, viewDate 
     setRecapData(null);
   };
 
+  const SPORT_TYPES = [
+    { key: 'club',   emoji: '🥊', label: 'Club MMA' },
+    { key: 'gym',    emoji: '🏋️', label: 'Gym' },
+    { key: 'maison', emoji: '🏠', label: 'Maison' },
+    { key: 'autre',  emoji: '✅', label: 'Autre' },
+  ];
+
   return (
     <>
       <div className="py-2 border-b border-gray-50">
@@ -80,6 +167,18 @@ export default function SportModule({ journal, onSportSave, setAgenda, viewDate 
           ))}
         </div>
       </div>
+
+      <ClubModal
+        open={step === 'club'}
+        onClose={() => setStep(null)}
+        onSave={handleClubSave}
+      />
+
+      <AutreModal
+        open={step === 'autre'}
+        onClose={() => setStep(null)}
+        onSave={handleAutreSave}
+      />
 
       <SeanceSelector
         open={step === 'select'}

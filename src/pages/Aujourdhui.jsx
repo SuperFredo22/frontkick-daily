@@ -22,7 +22,7 @@ export default function Aujourdhui() {
   const [journal, setJournal] = useJournal(viewDate);
   const [reporte, setReporte] = useReporteAujourdhui(viewDate);
   const [agenda, setAgenda] = useAgenda();
-  const { tiktok, fightfocus, marque, markDone, getNextItem, hasAvailableItems } = useAllBanques();
+  const { tiktok, fightfocus, marque, markDone, markUndone, getNextItem, hasAvailableItems } = useAllBanques();
   const [projets, setProjets] = useProjets();
 
   const [bonusInput, setBonusInput] = useState('');
@@ -82,7 +82,6 @@ export default function Aujourdhui() {
   };
 
   const handleSuivante = (banque, item) => {
-    // Skip discret — pas de trace dans le journal
     setReporte(prev => [...(prev || []), `${banque}_${item.id}`]);
   };
 
@@ -130,6 +129,10 @@ export default function Aujourdhui() {
     }));
   };
 
+  const handleSportClear = () => {
+    setJournal(prev => ({ ...prev, sport: null, habitudes: { ...(prev.habitudes || {}), sport: false } }));
+  };
+
   // ─── Habitudes ────────────────────────────────────────────────────────────
 
   const updateHabitude = (field, value) => {
@@ -149,9 +152,32 @@ export default function Aujourdhui() {
     setShowBonusInput(false);
   };
 
+  const removeBonus = (id) => {
+    setJournal(prev => ({ ...prev, bonus: (prev.bonus || []).filter(b => b.id !== id) }));
+  };
+
+  // ─── Undo fait ────────────────────────────────────────────────────────────
+
+  const handleUndoFait = (tache) => {
+    if (tache.banque === 'projet') {
+      setProjets(prev => prev.map(p => p.id === tache.projetId
+        ? { ...p, taches: p.taches.map(t => t.id === tache.id ? { ...t, statut: 'a_faire' } : t) }
+        : p
+      ));
+    } else {
+      markUndone(tache.banque, tache.id);
+    }
+    setJournal(prev => ({
+      ...prev,
+      taches: (prev.taches || []).filter(t =>
+        !(t.id === tache.id && t.banque === tache.banque && t.projetId === tache.projetId)
+      ),
+    }));
+  };
+
   const noSportDays = getConsecutiveNoSportDays();
   const hab = journal?.habitudes || { prieres: 0, sport: false, cigarettes: 0, note: '' };
-  const tachesFaites   = (journal?.taches || []).filter(t => t.statut === 'fait');
+  const tachesFaites    = (journal?.taches || []).filter(t => t.statut === 'fait');
   const tachesReportees = (journal?.taches || []).filter(t => t.statut === 'reporte');
 
   return (
@@ -168,14 +194,26 @@ export default function Aujourdhui() {
         </div>
         <button
           onClick={() => setViewDate(isYesterday ? today() : yesterday())}
-          className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 font-medium mt-1"
+          className="text-sm px-3 py-1.5 rounded-lg font-medium mt-1"
+          style={isYesterday
+            ? { background: '#C0392B', color: '#fff' }
+            : { background: '#F3F4F6', color: '#374151' }
+          }
         >
           {isYesterday ? '← Aujourd\'hui' : 'Hier'}
         </button>
       </div>
 
-      {/* Nudge sport */}
-      {noSportDays >= 3 && !journal?.sport && !journal?.habitudes?.sport && (
+      {/* Retroactivity banner */}
+      {isYesterday && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-xl">📅</span>
+          <p className="text-sm text-amber-800 font-semibold">Modification de la veille</p>
+        </div>
+      )}
+
+      {/* Nudge sport (hidden when viewing yesterday) */}
+      {!isYesterday && noSportDays >= 3 && !journal?.sport && !journal?.habitudes?.sport && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
           <span className="text-2xl">⚠️</span>
           <p className="text-sm text-amber-800 font-medium">
@@ -190,7 +228,6 @@ export default function Aujourdhui() {
           Suggestions du jour
         </h2>
         <div className="flex flex-col gap-3">
-          {/* TikTok */}
           <SuggestionCard
             banque="tiktok"
             item={nextTiktok}
@@ -200,7 +237,6 @@ export default function Aujourdhui() {
             onAutre={(item, texte) => handleAutre('tiktok', item, texte)}
             onSuivante={(item) => handleSuivante('tiktok', item)}
           />
-          {/* FightFocus */}
           <SuggestionCard
             banque="fightfocus"
             item={nextFightfocus}
@@ -210,7 +246,6 @@ export default function Aujourdhui() {
             onAutre={(item, texte) => handleAutre('fightfocus', item, texte)}
             onSuivante={(item) => handleSuivante('fightfocus', item)}
           />
-          {/* Marque */}
           <SuggestionCard
             banque="marque"
             item={nextMarque}
@@ -221,7 +256,6 @@ export default function Aujourdhui() {
             onSuivante={(item) => handleSuivante('marque', item)}
           />
 
-          {/* Projets actifs */}
           {activeProjects.map(projet => {
             const nextTask = getNextProjetTask(projet, skipped);
             const bg = projet.couleur + '22';
@@ -281,7 +315,13 @@ export default function Aujourdhui() {
           {(journal?.bonus || []).map(b => (
             <div key={b.id} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-card">
               <span className="text-green-500 text-sm">✓</span>
-              <span className="text-sm text-gray-700">{b.texte}</span>
+              <span className="text-sm text-gray-700 flex-1">{b.texte}</span>
+              <button
+                onClick={() => removeBonus(b.id)}
+                className="text-gray-300 text-base px-1 active:text-red-400"
+              >
+                🗑️
+              </button>
             </div>
           ))}
         </div>
@@ -308,6 +348,7 @@ export default function Aujourdhui() {
           <SportModule
             journal={journal}
             onSportSave={handleSportSave}
+            onSportClear={handleSportClear}
             setAgenda={setAgenda}
             viewDate={formatDate(viewDate)}
           />
@@ -350,9 +391,15 @@ export default function Aujourdhui() {
                     ? (projets.find(p => p.id === t.projetId)?.couleur || '#666')
                     : '#666';
                   return (
-                    <div key={i} className="flex items-start gap-2 mb-1">
-                      <span className="text-xs mt-0.5" style={{ color }}>●</span>
-                      <span className="text-xs text-gray-600 leading-snug">{t.label}</span>
+                    <div key={i} className="flex items-center gap-2 mb-1.5">
+                      <span className="text-xs shrink-0" style={{ color }}>●</span>
+                      <span className="text-xs text-gray-600 leading-snug flex-1">{t.label}</span>
+                      <button
+                        onClick={() => handleUndoFait(t)}
+                        className="text-xs text-gray-400 px-1.5 py-0.5 rounded bg-gray-100 active:bg-gray-200 shrink-0"
+                      >
+                        ↩️
+                      </button>
                     </div>
                   );
                 })}

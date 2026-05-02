@@ -38,6 +38,17 @@ export function useAllBanques() {
     }
   };
 
+  const markUndone = (banque, id) => {
+    const originalStatut = banque === 'tiktok' ? 'a_tourner' : 'a_faire';
+    if (banque === 'tiktok') {
+      setTiktok(prev => prev.map(item => item.id === id ? { ...item, statut: originalStatut } : item));
+    } else if (banque === 'fightfocus') {
+      setFightFocus(prev => prev.map(item => item.id === id ? { ...item, statut: originalStatut } : item));
+    } else if (banque === 'marque') {
+      setMarque(prev => prev.map(item => item.id === id ? { ...item, statut: originalStatut } : item));
+    }
+  };
+
   const markDejaFait = (banque, id) => {
     if (banque === 'tiktok') {
       setTiktok(prev => prev.map(item => item.id === id ? { ...item, statut: 'deja_fait' } : item));
@@ -70,5 +81,5 @@ export function useAllBanques() {
     return items.some(item => activeStatut.includes(item.statut));
   };
 
-  return { tiktok, setTiktok, fightfocus, setFightFocus, marque, setMarque, markDone, markDejaFait, getNextItem, hasAvailableItems };
+  return { tiktok, setTiktok, fightfocus, setFightFocus, marque, setMarque, markDone, markUndone, markDejaFait, getNextItem, hasAvailableItems };
 }

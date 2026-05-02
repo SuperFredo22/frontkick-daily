@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import Modal from '../Modal';
-import { SEANCES_MAISON } from '../../data/seances_maison';
-import { SEANCES_GYM, SEANCES_CLUB } from '../../data/seances_gym';
-
-const ALL = [...SEANCES_MAISON, ...SEANCES_GYM, ...SEANCES_CLUB];
-
-const DUREE_LABELS = {
-  court: '≤20 min',
-  moyen: '21-40 min',
-  long: '>40 min',
-};
+import { seancesGym } from '../../data/seances_gym';
+import { seancesMaison } from '../../data/seances_maison';
 
 export default function SeanceSelector({ open, lieu, onSelect, onClose }) {
-  const [duree, setDuree] = useState(null);
+  const [dureeFilter, setDureeFilter] = useState(null);
 
-  const seances = ALL.filter(s => s.lieu === lieu && (!duree || s.duree === duree));
+  const all = lieu === 'gym' ? seancesGym : seancesMaison;
+
+  const filtered = all.filter(s => {
+    if (!dureeFilter) return true;
+    if (dureeFilter === 'court') return s.duree <= 20;
+    if (dureeFilter === 'moyen') return s.duree > 20 && s.duree <= 40;
+    if (dureeFilter === 'long') return s.duree > 40;
+    return true;
+  });
 
   return (
     <Modal
@@ -29,7 +29,6 @@ export default function SeanceSelector({ open, lieu, onSelect, onClose }) {
       }
     >
       <div className="flex flex-col gap-4">
-        {/* Durée filter */}
         <div className="flex gap-2">
           {[
             { key: 'court', label: '⚡ Court' },
@@ -38,9 +37,9 @@ export default function SeanceSelector({ open, lieu, onSelect, onClose }) {
           ].map(({ key, label }) => (
             <button
               key={key}
-              onClick={() => setDuree(duree === key ? null : key)}
+              onClick={() => setDureeFilter(dureeFilter === key ? null : key)}
               className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors"
-              style={duree === key
+              style={dureeFilter === key
                 ? { background: '#27AE60', color: '#fff' }
                 : { background: '#F3F4F6', color: '#374151' }
               }
@@ -50,23 +49,37 @@ export default function SeanceSelector({ open, lieu, onSelect, onClose }) {
           ))}
         </div>
 
-        {/* Sessions */}
-        <div className="flex flex-col gap-2">
-          {seances.length === 0 ? (
+        <div className="flex flex-col gap-3">
+          {filtered.length === 0 ? (
             <p className="text-sm text-gray-400 italic text-center py-4">
               Aucune séance pour ce filtre
             </p>
-          ) : seances.map(s => (
-            <button
-              key={s.id}
-              onClick={() => onSelect(s)}
-              className="w-full text-left bg-gray-50 rounded-xl p-3 active:bg-gray-100 transition-colors"
-            >
-              <p className="text-sm font-medium text-gray-800">{s.nom}</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {DUREE_LABELS[s.duree]} · {s.exercices.length} exercices
-              </p>
-            </button>
+          ) : filtered.map(s => (
+            <div key={s.id} className="bg-gray-50 rounded-xl p-3">
+              <div className="flex items-start justify-between mb-1">
+                <p className="text-sm font-semibold text-gray-800">{s.nom}</p>
+                <span className="text-xs text-gray-400 ml-2 shrink-0">{s.duree} min</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-2">{s.type}</p>
+              <div className="mb-2">
+                {s.exercices.slice(0, 3).map((e, i) => (
+                  <p key={i} className="text-xs text-gray-500">• {e.nom} ({e.series}×{e.reps})</p>
+                ))}
+                {s.exercices.length > 3 && (
+                  <p className="text-xs text-gray-400">+{s.exercices.length - 3} autres…</p>
+                )}
+              </div>
+              {s.materiel && (
+                <p className="text-xs text-gray-400 mb-2">Matériel : {s.materiel}</p>
+              )}
+              <button
+                onClick={() => onSelect(s)}
+                className="w-full py-2 rounded-lg text-sm font-medium text-white active:opacity-90 transition-opacity"
+                style={{ background: '#27AE60' }}
+              >
+                Lancer cette séance
+              </button>
+            </div>
           ))}
         </div>
       </div>
