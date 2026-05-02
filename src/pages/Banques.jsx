@@ -73,6 +73,56 @@ function ItemMenu({ open, onClose, itemLabel, color, onModifier, onDejaFait, onS
   );
 }
 
+// ─── Static item row (no drag — used for deja_fait items outside SortableContext) ─
+
+function StaticItem({ item, banque, tab, onDejaFait, onSupprimer }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const isDejaFait = item.statut === 'deja_fait';
+  const isDone = item.statut === 'publiee' || item.statut === 'fait';
+
+  const label = banque === 'tiktok' ? item.titre
+    : banque === 'fightfocus' ? `${item.code} — ${item.description}`
+    : item.description;
+  const badge = banque === 'tiktok' ? item.priorite
+    : banque === 'fightfocus' ? item.priorite
+    : item.phase;
+  const statusLabel = isDejaFait ? '✅ Déjà réalisé'
+    : isDone ? (item.statut === 'publiee' ? '✅ Publiée' : '✅ Fait')
+    : item.statut === 'a_tourner' ? 'À tourner' : 'À faire';
+
+  return (
+    <>
+      <div className={`flex items-start gap-2 bg-white rounded-xl shadow-card p-3 mb-2 ${isDejaFait ? 'opacity-40' : 'opacity-60'}`}>
+        <span className="w-5 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-800 leading-snug line-through">{label}</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {badge && !isDejaFait && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: tab.bg, color: tab.color }}>
+                {badge}
+              </span>
+            )}
+            <span className={`text-[10px] ${isDejaFait ? 'text-gray-300' : 'text-gray-400'}`}>{statusLabel}</span>
+          </div>
+        </div>
+        <button onClick={() => setMenuOpen(true)}
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 flex-shrink-0 text-sm">
+          ···
+        </button>
+      </div>
+      <ItemMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        itemLabel={label}
+        color={tab.color}
+        onModifier={() => {}}
+        onDejaFait={() => onDejaFait(item.id)}
+        onSupprimer={() => onSupprimer(item.id)}
+      />
+    </>
+  );
+}
+
 // ─── Sortable item row ──────────────────────────────────────────────────────
 
 function SortableItem({ item, banque, tab, onEdit, onDejaFait, onSupprimer, hidden }) {
@@ -226,13 +276,13 @@ function BanqueList({ banque, items, setItems }) {
         </SortableContext>
       </DndContext>
 
-      {/* Deja fait items (non-draggable) */}
+      {/* Deja fait items (non-draggable, outside SortableContext intentionally) */}
       {showDone && dejaFait.length > 0 && (
         <div className="mt-1">
           <div className="h-px bg-gray-100 mb-3" />
           {dejaFait.map(item => (
-            <SortableItem key={item.id} item={item} banque={banque} tab={tab}
-              onEdit={() => {}} onDejaFait={() => {}} onSupprimer={handleSupprimer} />
+            <StaticItem key={item.id} item={item} banque={banque} tab={tab}
+              onDejaFait={handleDejaFait} onSupprimer={handleSupprimer} />
           ))}
         </div>
       )}
@@ -376,7 +426,9 @@ function ProjetCard({ projet, onEdit, onDelete, onUpdateTaches }) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-card mb-3 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-card mb-3 overflow-hidden relative">
+      {/* Left color bar */}
+      <div className="absolute left-0 top-0 bottom-0" style={{ width: 3, background: projet.couleur }} />
       {/* Project header */}
       <div className="flex items-center gap-3 p-3">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
@@ -400,9 +452,6 @@ function ProjetCard({ projet, onEdit, onDelete, onUpdateTaches }) {
           </button>
         </div>
       </div>
-
-      {/* Left color bar */}
-      <div className="absolute left-0" style={{ width: 3, background: projet.couleur }} />
 
       {expanded && (
         <div className="border-t border-gray-50 px-3 pb-2 pt-1">

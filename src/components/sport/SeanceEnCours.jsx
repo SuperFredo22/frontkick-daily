@@ -36,12 +36,20 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
       setChrono(c => c + 1);
       setRestTime(prev => {
         if (prev === null) return null;
-        if (prev <= 1) { playBeep(); return null; }
+        if (prev <= 1) return 0;
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Separate effect so playBeep() is never called inside a state updater
+  useEffect(() => {
+    if (restTime === 0) {
+      playBeep();
+      setRestTime(null);
+    }
+  }, [restTime]);
 
   const toggleSerie = (exIdx, sIdx) => {
     const key = `${exIdx}-${sIdx}`;
@@ -97,7 +105,7 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
               <button
                 key={i}
                 onClick={() => toggleSerie(currentEx, i)}
-                className={`w-13 h-13 w-[52px] h-[52px] rounded-full text-base font-bold transition-all active:scale-95 ${
+                className={`w-[52px] h-[52px] rounded-full text-base font-bold transition-all active:scale-95 ${
                   done ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-300'
                 }`}
               >

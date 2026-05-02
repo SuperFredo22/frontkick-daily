@@ -11,7 +11,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: '#FAFAFA' }}>
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden min-h-0">
         {page === 'today' && <div className="h-full overflow-auto"><Aujourdhui /></div>}
         {page === 'agenda' && <Agenda />}
         {page === 'stats' && <div className="h-full overflow-auto"><Stats /></div>}

@@ -75,6 +75,7 @@ export function getConsecutiveNoSportDays() {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const journal = getJournalForDate(formatDate(d));
+    if (!journal) break; // no journal = app not used that day, stop counting
     const hasSport = journal?.sport || journal?.habitudes?.sport;
     if (!hasSport) count++;
     else break;

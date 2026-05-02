@@ -44,8 +44,6 @@ export default function Stats() {
 
   const chartData = daily.map(d => ({ ...d, name: d.date.slice(5) }));
   const sportChartData = sportDaily.map(d => ({ ...d, name: d.date.slice(5) }));
-
-  const TYPE_LABELS = { club: 'Club MMA', gym: 'Gym', maison: 'Maison', autre: 'Autre' };
   const projetEntries = Object.entries(monthStats.projets || {});
 
   return (

@@ -3,6 +3,7 @@ export const SEANCES_GYM = [
     id: 'gym_1',
     nom: 'Push — Poitrine / Épaules / Triceps',
     lieu: 'gym',
+    type: 'force',
     duree: 'moyen',
     duree_min: 45,
     exercices: [
@@ -19,6 +20,7 @@ export const SEANCES_GYM = [
     id: 'gym_2',
     nom: 'Pull — Dos / Biceps',
     lieu: 'gym',
+    type: 'force',
     duree: 'moyen',
     duree_min: 45,
     exercices: [
@@ -35,6 +37,7 @@ export const SEANCES_GYM = [
     id: 'gym_3',
     nom: 'Leg Day',
     lieu: 'gym',
+    type: 'force',
     duree: 'long',
     duree_min: 55,
     exercices: [
@@ -51,6 +54,7 @@ export const SEANCES_GYM = [
     id: 'gym_4',
     nom: 'Cardio HIIT',
     lieu: 'gym',
+    type: 'cardio',
     duree: 'court',
     duree_min: 20,
     exercices: [
@@ -63,6 +67,7 @@ export const SEANCES_GYM = [
     id: 'gym_5',
     nom: 'Full Body Force',
     lieu: 'gym',
+    type: 'force',
     duree: 'long',
     duree_min: 60,
     exercices: [
@@ -82,6 +87,7 @@ export const SEANCES_CLUB = [
     id: 'club_1',
     nom: 'Cours MMA',
     lieu: 'club',
+    type: 'technique',
     duree: 'long',
     duree_min: 60,
     exercices: [
@@ -96,6 +102,7 @@ export const SEANCES_CLUB = [
     id: 'club_2',
     nom: 'Sparring',
     lieu: 'club',
+    type: 'sparring',
     duree: 'long',
     duree_min: 90,
     exercices: [
@@ -110,6 +117,7 @@ export const SEANCES_CLUB = [
     id: 'club_3',
     nom: 'Boxe Thaï',
     lieu: 'club',
+    type: 'technique',
     duree: 'moyen',
     duree_min: 45,
     exercices: [
