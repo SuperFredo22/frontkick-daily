@@ -361,6 +361,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
             userSelect: 'none', WebkitUserSelect: 'none',
           }}
           {...prieresLongPress}
+          onContextMenu={e => e.preventDefault()}
           title="Tap = +1 · Maintenir = éditer"
         >
           <span>🙏</span>
@@ -395,6 +396,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
             userSelect: 'none', WebkitUserSelect: 'none',
           }}
           {...cigsLongPress}
+          onContextMenu={e => e.preventDefault()}
           title="Tap = +1 · Maintenir = éditer"
         >
           <span>🚬</span>

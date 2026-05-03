@@ -77,7 +77,7 @@ function ItemMenu({ open, onClose, itemLabel, color, onModifier, onDejaFait, onS
 
 // ─── Static item row (no drag — used for deja_fait items outside SortableContext) ─
 
-function StaticItem({ item, banque, tab, onDejaFait, onSupprimer }) {
+function StaticItem({ item, banque, tab, onModifier, onDejaFait, onSupprimer }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isDejaFait = item.statut === 'deja_fait';
   const isDone = item.statut === 'publiee' || item.statut === 'fait';
@@ -117,7 +117,7 @@ function StaticItem({ item, banque, tab, onDejaFait, onSupprimer }) {
         onClose={() => setMenuOpen(false)}
         itemLabel={label}
         color={tab.color}
-        onModifier={() => {}}
+        onModifier={() => onModifier?.(item)}
         onDejaFait={() => onDejaFait(item.id)}
         onSupprimer={() => onSupprimer(item.id)}
       />
@@ -315,7 +315,7 @@ function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 
           <div className="h-px bg-gray-100 mb-3" />
           {dejaFait.map(item => (
             <StaticItem key={item.id} item={item} banque={banque} tab={tab}
-              onDejaFait={handleDejaFait} onSupprimer={handleSupprimer} />
+              onModifier={openEdit} onDejaFait={handleDejaFait} onSupprimer={handleSupprimer} />
           ))}
         </div>
       )}
@@ -402,7 +402,7 @@ function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 
 
 const PROJET_FORM_EMPTY = { nom: '', emoji: '📁', couleur: PROJET_PALETTE[0], taches: [] };
 
-function ProjetTaskRow({ tache, projetCouleur, onDejaFait, onSupprimer }) {
+function ProjetTaskRow({ tache, projetCouleur, onModifier, onDejaFait, onSupprimer }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isDejaFait = tache.statut === 'deja_fait';
   const isDone = tache.statut === 'fait';
@@ -425,7 +425,7 @@ function ProjetTaskRow({ tache, projetCouleur, onDejaFait, onSupprimer }) {
         onClose={() => setMenuOpen(false)}
         itemLabel={tache.description}
         color={projetCouleur}
-        onModifier={() => {}}
+        onModifier={() => onModifier?.(tache)}
         onDejaFait={() => onDejaFait(tache.id)}
         onSupprimer={() => onSupprimer(tache.id)}
       />
@@ -438,6 +438,8 @@ function ProjetCard({ projet, onEdit, onDelete, onUpdateTaches }) {
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTask, setNewTask] = useState('');
   const [showDoneTask, setShowDoneTasks] = useState(false);
+  const [editTask, setEditTask] = useState(null);
+  const [editTaskText, setEditTaskText] = useState('');
 
   const activeTaches = (projet.taches || []).filter(t => t.statut === 'a_faire');
   const doneTaches   = (projet.taches || []).filter(t => t.statut === 'fait' || t.statut === 'deja_fait');
@@ -456,6 +458,15 @@ function ProjetCard({ projet, onEdit, onDelete, onUpdateTaches }) {
 
   const removeTask = (tacheId) => {
     onUpdateTaches(projet.taches.filter(t => t.id !== tacheId));
+  };
+
+  const openEditTask = (tache) => { setEditTask(tache); setEditTaskText(tache.description); };
+
+  const saveEditTask = () => {
+    if (!editTaskText.trim()) return;
+    onUpdateTaches(projet.taches.map(t => t.id === editTask.id ? { ...t, description: editTaskText.trim() } : t));
+    setEditTask(null);
+    setEditTaskText('');
   };
 
   return (
@@ -490,7 +501,7 @@ function ProjetCard({ projet, onEdit, onDelete, onUpdateTaches }) {
         <div className="border-t border-gray-50 px-3 pb-2 pt-1">
           {activeTaches.map(t => (
             <ProjetTaskRow key={t.id} tache={t} projetCouleur={projet.couleur}
-              onDejaFait={markTaskDejaFait} onSupprimer={removeTask} />
+              onModifier={openEditTask} onDejaFait={markTaskDejaFait} onSupprimer={removeTask} />
           ))}
 
           {doneTaches.length > 0 && (
@@ -501,7 +512,7 @@ function ProjetCard({ projet, onEdit, onDelete, onUpdateTaches }) {
           )}
           {showDoneTask && doneTaches.map(t => (
             <ProjetTaskRow key={t.id} tache={t} projetCouleur={projet.couleur}
-              onDejaFait={markTaskDejaFait} onSupprimer={removeTask} />
+              onModifier={openEditTask} onDejaFait={markTaskDejaFait} onSupprimer={removeTask} />
           ))}
 
           {showAddTask ? (
@@ -521,6 +532,33 @@ function ProjetCard({ projet, onEdit, onDelete, onUpdateTaches }) {
           )}
         </div>
       )}
+      {/* Edit task modal */}
+      <Modal
+        open={!!editTask}
+        onClose={() => { setEditTask(null); setEditTaskText(''); }}
+        title="Modifier la tâche"
+        footer={
+          <div className="flex gap-2 w-full">
+            <button onClick={saveEditTask} disabled={!editTaskText.trim()}
+              className="flex-1 py-2.5 rounded-lg text-white font-medium text-sm disabled:opacity-40"
+              style={{ background: projet.couleur }}>
+              Enregistrer
+            </button>
+            <button onClick={() => { setEditTask(null); setEditTaskText(''); }}
+              className="flex-1 py-2.5 rounded-lg bg-gray-100 text-gray-600 font-medium text-sm">
+              Annuler
+            </button>
+          </div>
+        }
+      >
+        <textarea
+          autoFocus value={editTaskText}
+          onChange={e => setEditTaskText(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEditTask(); } }}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
+          rows={3}
+        />
+      </Modal>
     </div>
   );
 }

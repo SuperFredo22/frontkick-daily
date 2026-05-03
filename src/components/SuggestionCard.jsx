@@ -18,8 +18,8 @@ function getLabel(banque, item, config) {
 function getSub(banque, item, config) {
   if (config?.getSub) return config.getSub(item);
   if (banque === 'tiktok') return `${item.format} · ${item.discipline}`;
-  if (banque === 'fightfocus') return item.priorite ? `Priorité ${item.priorite}` : null;
-  if (banque === 'marque') return item.phase || null;
+  if (banque === 'fightfocus') return null; // priorité déjà affichée dans le badge
+  if (banque === 'marque') return null;     // phase déjà affichée dans le badge
   return null;
 }
 
@@ -70,7 +70,8 @@ export default function SuggestionCard({
 
   const label = getLabel(banque, item, configOverride);
   const sub = getSub(banque, item, configOverride);
-  const badge = configOverride?.badge ? configOverride.badge(item) : item.priorite;
+  // priorite pour tiktok/fightfocus, phase pour marque, sinon rien
+  const badge = configOverride?.badge ? configOverride.badge(item) : (item.priorite || item.phase || null);
 
   const modals = (
     <>

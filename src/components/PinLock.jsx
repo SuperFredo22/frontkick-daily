@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const PIN_KEY  = 'fk_pin';
 const SESSION_KEY = 'fk_unlocked';
