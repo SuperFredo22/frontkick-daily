@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export function useStorage(key, defaultValue) {
   const prefixedKey = `fk_${key}`;
@@ -14,32 +14,32 @@ export function useStorage(key, defaultValue) {
   };
 
   const [value, setValue] = useState(() => readFromStorage(prefixedKey));
+  const prevKeyRef = useRef(prefixedKey);
 
-  // Track the current key and whether to skip the next write
-  const keyRef = useRef(prefixedKey);
-  const skipNextWriteRef = useRef(false);
-
+  // When key changes (today ↔ yesterday), reload from storage — no write
   useEffect(() => {
-    if (keyRef.current !== prefixedKey) {
-      // Key changed (e.g. switching between today/yesterday):
-      // load the new key's data — do NOT write old value to new key
-      keyRef.current = prefixedKey;
-      skipNextWriteRef.current = true;
+    if (prevKeyRef.current !== prefixedKey) {
+      prevKeyRef.current = prefixedKey;
       setValue(readFromStorage(prefixedKey));
-    } else if (skipNextWriteRef.current) {
-      // First render after a key change: value is freshly read from storage, skip write
-      skipNextWriteRef.current = false;
-    } else {
-      // Normal case: value changed by user action → persist it
+    }
+  }, [prefixedKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Setter that writes to localStorage atomically with the state update.
+  // Using prefixedKey from the closure guarantees we always write to the correct key
+  // for this render cycle — no separate write-on-render effect needed.
+  const setValueAndPersist = useCallback((updater) => {
+    setValue(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
       try {
-        localStorage.setItem(prefixedKey, JSON.stringify(value));
+        localStorage.setItem(prefixedKey, JSON.stringify(next));
       } catch (e) {
         console.error('localStorage write error', e);
       }
-    }
-  }, [prefixedKey, value]); // eslint-disable-line react-hooks/exhaustive-deps
+      return next;
+    });
+  }, [prefixedKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return [value, setValue];
+  return [value, setValueAndPersist];
 }
 
 export function getStorage(key) {

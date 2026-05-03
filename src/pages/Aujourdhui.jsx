@@ -45,7 +45,7 @@ function useLongPress(onLongPress, onShortPress, delay = 500) {
   return {
     onPointerDown: start,
     onPointerUp: cancel,
-    onPointerLeave: cancel,
+    onPointerCancel: cancel, // pointerleave retiré — annulait le timer sur mobile si le doigt dérive
     onClick: handleClick,
   };
 }
@@ -359,6 +359,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
             color: (hab.prieres || 0) > 0 ? 'var(--red)' : 'var(--ink-2)',
             fontSize: 13, fontWeight: 500,
             userSelect: 'none', WebkitUserSelect: 'none',
+            touchAction: 'none',
           }}
           {...prieresLongPress}
           onContextMenu={e => e.preventDefault()}
@@ -394,6 +395,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
             color: (hab.cigarettes || 0) === 0 ? 'var(--green)' : 'var(--orange)',
             fontSize: 13, fontWeight: 500,
             userSelect: 'none', WebkitUserSelect: 'none',
+            touchAction: 'none',
           }}
           {...cigsLongPress}
           onContextMenu={e => e.preventDefault()}
