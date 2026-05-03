@@ -281,14 +281,23 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
   };
 
   // ─── Long press sur prières & cigarettes ─────────────────────────────────
+  // Après un long press, iOS synthétise un click ~300ms après touchend qui frappe
+  // le fond du modal et le refermerait immédiatement. Ce ref bloque la fermeture
+  // backdrop pendant 500ms après l'ouverture par long press.
+  const blockModalCloseRef = useRef(false);
+  const openWithBlock = (openFn) => {
+    blockModalCloseRef.current = true;
+    openFn();
+    setTimeout(() => { blockModalCloseRef.current = false; }, 500);
+  };
 
   const prieresLongPress = useLongPress(
-    () => { setEditPrieres(hab.prieres || 0); setShowPrieresEdit(true); },
+    () => openWithBlock(() => { setEditPrieres(hab.prieres || 0); setShowPrieresEdit(true); }),
     () => updateHabitude('prieres', (hab.prieres || 0) + 1),
   );
 
   const cigsLongPress = useLongPress(
-    () => { setEditCigs(hab.cigarettes || 0); setShowCigsEdit(true); },
+    () => openWithBlock(() => { setEditCigs(hab.cigarettes || 0); setShowCigsEdit(true); }),
     () => updateHabitude('cigarettes', (hab.cigarettes || 0) + 1),
   );
 
@@ -680,7 +689,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
       {/* ── Modal édition prières ──────────────────────────────────────── */}
       <Modal
         open={showPrieresEdit}
-        onClose={() => setShowPrieresEdit(false)}
+        onClose={() => { if (blockModalCloseRef.current) return; setShowPrieresEdit(false); }}
         title="🙏 Prières"
         footer={
           <div className="flex gap-2 w-full">
@@ -725,7 +734,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
       {/* ── Modal édition cigarettes ───────────────────────────────────── */}
       <Modal
         open={showCigsEdit}
-        onClose={() => setShowCigsEdit(false)}
+        onClose={() => { if (blockModalCloseRef.current) return; setShowCigsEdit(false); }}
         title="🚬 Cigarettes"
         footer={
           <div className="flex gap-2 w-full">
