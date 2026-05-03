@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, SlidersHorizontal } from 'lucide-react';
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
 } from '@dnd-kit/core';
@@ -9,6 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTikTok, useFightFocus, useMarque } from '../hooks/useBanques';
 import { useProjets, PROJET_PALETTE } from '../hooks/useProjets';
 import Modal from '../components/Modal';
+import SwipeableRow from '../components/SwipeableRow';
 
 const TABS = [
   { id: 'tiktok',     label: 'TikTok',     color: 'var(--red)',    bg: 'var(--red-50)' },
@@ -125,8 +127,8 @@ function StaticItem({ item, banque, tab, onDejaFait, onSupprimer }) {
 
 // ─── Sortable item row ──────────────────────────────────────────────────────
 
-function SortableItem({ item, banque, tab, onEdit, onDejaFait, onSupprimer, hidden }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+function SortableItem({ item, banque, tab, onEdit, onDejaFait, onSupprimer, hidden, wrapped = false, dragDisabled = false }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled: dragDisabled });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -152,12 +154,12 @@ function SortableItem({ item, banque, tab, onEdit, onDejaFait, onSupprimer, hidd
       <div
         ref={setNodeRef}
         style={style}
-        className={`flex items-start gap-2 bg-white rounded-xl shadow-card p-3 mb-2 ${isDejaFait ? 'opacity-40' : isDone ? 'opacity-60' : ''}`}
+        className={`flex items-start gap-2 bg-white rounded-xl p-3 ${wrapped ? '' : 'mb-2 shadow-card'} ${isDejaFait ? 'opacity-40' : isDone ? 'opacity-60' : ''}`}
       >
-        {!isDejaFait && (
+        {!isDejaFait && !dragDisabled && (
           <span {...attributes} {...listeners} className="drag-handle text-gray-300 text-lg mt-0.5 flex-shrink-0 select-none">⠿</span>
         )}
-        {isDejaFait && <span className="w-5 flex-shrink-0" />}
+        {(isDejaFait || dragDisabled) && <span className="w-5 flex-shrink-0" />}
 
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium text-gray-800 leading-snug ${(isDone || isDejaFait) ? 'line-through' : ''}`}>{label}</p>
@@ -195,7 +197,7 @@ function SortableItem({ item, banque, tab, onEdit, onDejaFait, onSupprimer, hidd
 
 // ─── Banque list (TikTok / FightFocus / Marque) ─────────────────────────────
 
-function BanqueList({ banque, items, setItems }) {
+function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 'all' }) {
   const [editItem, setEditItem] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({});
@@ -207,17 +209,41 @@ function BanqueList({ banque, items, setItems }) {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   );
 
-  const active  = items.filter(i => i.statut !== 'publiee' && i.statut !== 'fait' && i.statut !== 'deja_fait');
-  const done    = items.filter(i => i.statut === 'publiee' || i.statut === 'fait');
-  const dejaFait = items.filter(i => i.statut === 'deja_fait');
+  const isFiltered = !!searchQuery.trim() || filterStatus !== 'all';
+
+  const matchesSearch = (item) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const text = banque === 'tiktok' ? (item.titre || '')
+      : banque === 'fightfocus' ? `${item.code || ''} ${item.description || ''}`
+      : (item.description || '');
+    return text.toLowerCase().includes(q);
+  };
+
+  const matchesFilter = (item) => {
+    if (filterStatus === 'all') return true;
+    return item.statut === filterStatus;
+  };
+
+  // Full arrays for DnD ordering
+  const allActive  = items.filter(i => i.statut !== 'publiee' && i.statut !== 'fait' && i.statut !== 'deja_fait');
+  const allDone    = items.filter(i => i.statut === 'publiee' || i.statut === 'fait');
+  const allDejaFait = items.filter(i => i.statut === 'deja_fait');
+
+  // Filtered arrays for display
+  const active   = allActive.filter(i => matchesSearch(i) && matchesFilter(i));
+  const done     = allDone.filter(i => matchesSearch(i) && matchesFilter(i));
+  const dejaFait = allDejaFait.filter(i => matchesSearch(i));
   const draggable = [...active, ...done];
 
   const handleDragEnd = ({ active: a, over }) => {
     if (!over || a.id === over.id) return;
-    const oldIdx = draggable.findIndex(i => i.id === a.id);
-    const newIdx = draggable.findIndex(i => i.id === over.id);
-    const reordered = arrayMove(draggable, oldIdx, newIdx);
-    setItems([...reordered, ...dejaFait]);
+    const allDraggable = [...allActive, ...allDone];
+    const oldIdx = allDraggable.findIndex(i => i.id === a.id);
+    const newIdx = allDraggable.findIndex(i => i.id === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
+    const reordered = arrayMove(allDraggable, oldIdx, newIdx);
+    setItems([...reordered, ...allDejaFait]);
   };
 
   const openEdit = (item) => { setEditItem(item); setForm({ ...item }); setShowAdd(false); };
@@ -270,8 +296,15 @@ function BanqueList({ banque, items, setItems }) {
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={draggable.map(i => i.id)} strategy={verticalListSortingStrategy}>
           {draggable.map(item => (
-            <SortableItem key={item.id} item={item} banque={banque} tab={tab}
-              onEdit={openEdit} onDejaFait={handleDejaFait} onSupprimer={handleSupprimer} />
+            <SwipeableRow
+              key={item.id}
+              onFait={() => handleDejaFait(item.id)}
+              onSupprimer={() => handleSupprimer(item.id)}
+            >
+              <SortableItem item={item} banque={banque} tab={tab}
+                onEdit={openEdit} onDejaFait={handleDejaFait} onSupprimer={handleSupprimer}
+                wrapped dragDisabled={isFiltered} />
+            </SwipeableRow>
           ))}
         </SortableContext>
       </DndContext>
@@ -594,41 +627,104 @@ function ProjetsList({ projets, setProjets }) {
 
 // ─── Main Banques page ────────────────────────────────────────────────────────
 
-export default function Banques() {
+export default function Banques({ pendingCompose, onPendingConsumed }) {
   const [activeTab, setActiveTab] = useState('tiktok');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [tiktok, setTiktok] = useTikTok();
   const [fightfocus, setFightFocus] = useFightFocus();
   const [marque, setMarque] = useMarque();
   const [projets, setProjets] = useProjets();
 
+  useEffect(() => {
+    if (!pendingCompose) return;
+    if (['tiktok', 'fightfocus', 'marque', 'projets'].includes(pendingCompose)) {
+      setActiveTab(pendingCompose);
+      setFilterStatus('all');
+      onPendingConsumed?.();
+    }
+  }, [pendingCompose]);
+
   const setters = { tiktok: setTiktok, fightfocus: setFightFocus, marque: setMarque };
   const data = { tiktok, fightfocus, marque };
 
+  const activeTabConfig = TABS.find(t => t.id === activeTab);
+
+  const filterOptions = activeTab === 'tiktok'
+    ? [{ id: 'all', label: 'Toutes' }, { id: 'a_tourner', label: 'À tourner' }, { id: 'publiee', label: 'Publiées' }]
+    : activeTab === 'projets'
+    ? []
+    : [{ id: 'all', label: 'Toutes' }, { id: 'a_faire', label: 'À faire' }, { id: 'fait', label: 'Faites' }];
+
   return (
-    <div className="flex flex-col h-screen">
-      {/* Scrollable tab bar */}
-      <div className="bg-white border-b border-gray-100 flex overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+    <div className="flex flex-col h-full">
+      {/* Search bar */}
+      <div className="px-4 pt-3 pb-2" style={{ background: 'var(--bg)' }}>
+        <div className="flex items-center gap-2 rounded-2xl px-3 py-2 shadow-card" style={{ background: 'var(--surface)' }}>
+          <Search size={15} color="var(--ink-3)" />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Rechercher..."
+            className="flex-1 text-sm outline-none bg-transparent"
+            style={{ color: 'var(--ink)' }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="text-xs leading-none" style={{ color: 'var(--ink-3)' }}>✕</button>
+          )}
+        </div>
+      </div>
+
+      {/* Pill tabs */}
+      <div className="flex gap-2 px-4 pb-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
         {TABS.map(t => (
           <button
             key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            className="flex-shrink-0 flex-1 py-3 px-2 text-sm font-semibold transition-colors border-b-2 min-w-0"
+            onClick={() => { setActiveTab(t.id); setFilterStatus('all'); setSearchQuery(''); }}
+            className="flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold btn-press transition-colors"
             style={activeTab === t.id
-              ? { borderColor: t.color, color: t.color }
-              : { borderColor: 'transparent', color: 'var(--ink-3)' }}
+              ? { background: t.color, color: 'white' }
+              : { background: 'var(--line-2)', color: 'var(--ink-2)' }}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 overflow-auto px-4 pt-3 pb-nav" style={{ background: 'var(--bg)' }}>
+      {/* Filter chips */}
+      {filterOptions.length > 0 && (
+        <div className="flex gap-2 items-center px-4 pb-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          {filterOptions.map(f => (
+            <button
+              key={f.id}
+              onClick={() => setFilterStatus(f.id)}
+              className="flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium btn-press"
+              style={filterStatus === f.id
+                ? { background: activeTabConfig?.color, color: 'white' }
+                : { background: 'var(--line-2)', color: 'var(--ink-2)' }}
+            >
+              {f.label}
+            </button>
+          ))}
+          <button
+            className="ml-auto flex items-center gap-1 flex-shrink-0 btn-press"
+            style={{ fontSize: 12, color: 'var(--ink-3)' }}
+          >
+            <SlidersHorizontal size={12} />
+            Trier
+          </button>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-auto px-4 pt-1 pb-nav" style={{ background: 'var(--bg)' }}>
         {activeTab !== 'projets' ? (
           <BanqueList
             key={activeTab}
             banque={activeTab}
             items={data[activeTab]}
             setItems={setters[activeTab]}
+            searchQuery={searchQuery}
+            filterStatus={filterStatus}
           />
         ) : (
           <ProjetsList projets={projets} setProjets={setProjets} />

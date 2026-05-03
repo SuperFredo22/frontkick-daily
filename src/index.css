@@ -94,3 +94,11 @@ input, textarea, select {
   text-decoration: line-through;
   opacity: 0.5;
 }
+
+/* Button press feedback */
+.btn-press {
+  transition: transform 80ms ease;
+}
+.btn-press:active {
+  transform: scale(0.97);
+}

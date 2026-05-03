@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Menu, ChevronRight } from 'lucide-react';
 import { formatDateFR, formatDate, today, yesterday } from '../utils/date';
 import { useJournal, useReporteAujourdhui } from '../hooks/useJournal';
 import { useAllBanques } from '../hooks/useBanques';
@@ -8,6 +9,7 @@ import { getConsecutiveNoSportDays } from '../utils/stats';
 import SuggestionCard from '../components/SuggestionCard';
 import Card from '../components/Card';
 import SportModule from '../components/sport/SportModule';
+import Modal from '../components/Modal';
 
 function makeItemLabel(banque, item) {
   if (banque === 'tiktok') return item.titre;
@@ -15,40 +17,64 @@ function makeItemLabel(banque, item) {
   return item.description;
 }
 
-export default function Aujourdhui() {
+const BANQUE_EMOJI = { tiktok: '🎬', fightfocus: '🌐', marque: '👕' };
+const BANQUE_COLOR = { tiktok: 'var(--red)', fightfocus: 'var(--cyan)', marque: 'var(--orange)' };
+
+export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
   const [viewDate, setViewDate] = useState(today());
   const isYesterday = formatDate(viewDate) !== formatDate(today());
 
   const [journal, setJournal] = useJournal(viewDate);
   const [reporte, setReporte] = useReporteAujourdhui(viewDate);
   const [agenda, setAgenda] = useAgenda();
-  const { tiktok, fightfocus, marque, markDone, markUndone, getNextItem, hasAvailableItems } = useAllBanques();
+  const { markDone, markUndone, getNextItem, hasAvailableItems } = useAllBanques();
   const [projets, setProjets] = useProjets();
 
   const [bonusInput, setBonusInput] = useState('');
   const [showBonusInput, setShowBonusInput] = useState(false);
+  const [heroFading, setHeroFading] = useState(false);
+  const [showSportSheet, setShowSportSheet] = useState(false);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [prieresPressTimer, setPrieresPressTimer] = useState(null);
+  const [cigasPressTimer, setCigasPressTimer] = useState(null);
 
   const skipped = reporte || [];
 
   const nextTiktok     = getNextItem('tiktok',     skipped);
   const nextFightfocus = getNextItem('fightfocus', skipped);
   const nextMarque     = getNextItem('marque',     skipped);
-
   const activeProjects = getActiveProjects(projets, skipped);
 
-  // ─── Handlers communs ────────────────────────────────────────────────────
+  // Build unified suggestions list
+  const allSuggestions = [
+    nextTiktok     && { banque: 'tiktok',     item: nextTiktok },
+    nextFightfocus && { banque: 'fightfocus', item: nextFightfocus },
+    nextMarque     && { banque: 'marque',     item: nextMarque },
+    ...activeProjects.map(p => {
+      const task = getNextProjetTask(p, skipped);
+      return task ? { banque: 'projet', item: task, projet: p } : null;
+    }),
+  ].filter(Boolean);
+
+  const hero  = allSuggestions[0] || null;
+  const queue = allSuggestions.slice(1);
+
+  // Handle pendingCompose from FAB
+  useEffect(() => {
+    if (pendingCompose === 'bonus') {
+      setShowBonusInput(true);
+      onPendingConsumed?.();
+    }
+  }, [pendingCompose]);
+
+  // ─── Agenda event ────────────────────────────────────────────────────────
 
   const addAgendaEvent = (label, banque, color, timeSlot) => {
     if (!timeSlot?.debut || !timeSlot?.fin) return;
     setAgenda(prev => [...(prev || []), {
-      id: Date.now(),
-      titre: label,
-      date: formatDate(viewDate),
-      heureDebut: timeSlot.debut,
-      heureFin: timeSlot.fin,
-      type: banque,
-      color,
-      fromTask: true,
+      id: Date.now(), titre: label,
+      date: formatDate(viewDate), heureDebut: timeSlot.debut, heureFin: timeSlot.fin,
+      type: banque, color, fromTask: true,
     }]);
   };
 
@@ -62,14 +88,13 @@ export default function Aujourdhui() {
     }));
   };
 
-  // ─── Banques ──────────────────────────────────────────────────────────────
+  // ─── Banques handlers ────────────────────────────────────────────────────
 
   const handleFait = (banque, item, timeSlot) => {
     markDone(banque, item.id);
     const label = makeItemLabel(banque, item);
-    const colors = { tiktok: 'var(--red)', fightfocus: 'var(--cyan)', marque: 'var(--orange)' };
     addJournalTache({ id: item.id, banque, label, statut: 'fait', heure: timeSlot });
-    addAgendaEvent(label, banque, colors[banque], timeSlot);
+    addAgendaEvent(label, banque, BANQUE_COLOR[banque], timeSlot);
   };
 
   const handleReporte = (banque, item) => {
@@ -85,7 +110,7 @@ export default function Aujourdhui() {
     setReporte(prev => [...(prev || []), `${banque}_${item.id}`]);
   };
 
-  // ─── Projets ──────────────────────────────────────────────────────────────
+  // ─── Projet handlers ──────────────────────────────────────────────────────
 
   const handleProjetFait = (projet, tache, timeSlot) => {
     setProjets(prev => prev.map(p =>
@@ -102,21 +127,46 @@ export default function Aujourdhui() {
 
   const handleProjetReporte = (projet, tache) => {
     setReporte(prev => [...(prev || []), `projet_${projet.id}_${tache.id}`]);
-    addJournalTache({
-      id: tache.id, banque: 'projet', projetId: projet.id, projetNom: projet.nom,
-      label: tache.description, statut: 'reporte',
-    });
+    addJournalTache({ id: tache.id, banque: 'projet', projetId: projet.id, projetNom: projet.nom, label: tache.description, statut: 'reporte' });
   };
 
   const handleProjetAutre = (projet, tache, texte) => {
-    addJournalTache({
-      id: tache.id, banque: 'projet', projetId: projet.id, projetNom: projet.nom,
-      label: tache.description, statut: 'autre', autreTexte: texte,
-    });
+    addJournalTache({ id: tache.id, banque: 'projet', projetId: projet.id, projetNom: projet.nom, label: tache.description, statut: 'autre', autreTexte: texte });
   };
 
   const handleProjetSuivante = (projet, tache) => {
     setReporte(prev => [...(prev || []), `projet_${projet.id}_${tache.id}`]);
+  };
+
+  // ─── Generic suggestion handlers ─────────────────────────────────────────
+
+  const handleSuggestionFait = (suggestion, timeSlot) => {
+    if (suggestion.banque === 'projet') handleProjetFait(suggestion.projet, suggestion.item, timeSlot);
+    else handleFait(suggestion.banque, suggestion.item, timeSlot);
+  };
+
+  const handleSuggestionReporte = (suggestion) => {
+    if (suggestion.banque === 'projet') handleProjetReporte(suggestion.projet, suggestion.item);
+    else handleReporte(suggestion.banque, suggestion.item);
+  };
+
+  const handleSuggestionAutre = (suggestion, texte) => {
+    if (suggestion.banque === 'projet') handleProjetAutre(suggestion.projet, suggestion.item, texte);
+    else handleAutre(suggestion.banque, suggestion.item, texte);
+  };
+
+  const handleSuggestionSuivante = (suggestion) => {
+    if (suggestion.banque === 'projet') handleProjetSuivante(suggestion.projet, suggestion.item);
+    else handleSuivante(suggestion.banque, suggestion.item);
+  };
+
+  // Hero "Fait" with fade animation
+  const handleHeroFait = (_, timeSlot) => {
+    setHeroFading(true);
+    setTimeout(() => {
+      handleSuggestionFait(hero, timeSlot);
+      setHeroFading(false);
+    }, 280);
   };
 
   // ─── Sport ────────────────────────────────────────────────────────────────
@@ -127,6 +177,7 @@ export default function Aujourdhui() {
       sport: sportData,
       habitudes: { ...(prev.habitudes || {}), sport: true },
     }));
+    setShowSportSheet(false);
   };
 
   const handleSportClear = () => {
@@ -136,18 +187,12 @@ export default function Aujourdhui() {
   // ─── Habitudes ────────────────────────────────────────────────────────────
 
   const updateHabitude = (field, value) => {
-    setJournal(prev => ({
-      ...prev,
-      habitudes: { ...(prev.habitudes || {}), [field]: value },
-    }));
+    setJournal(prev => ({ ...prev, habitudes: { ...(prev.habitudes || {}), [field]: value } }));
   };
 
   const addBonus = () => {
     if (!bonusInput.trim()) return;
-    setJournal(prev => ({
-      ...prev,
-      bonus: [...(prev.bonus || []), { id: Date.now(), texte: bonusInput.trim() }],
-    }));
+    setJournal(prev => ({ ...prev, bonus: [...(prev.bonus || []), { id: Date.now(), texte: bonusInput.trim() }] }));
     setBonusInput('');
     setShowBonusInput(false);
   };
@@ -155,8 +200,6 @@ export default function Aujourdhui() {
   const removeBonus = (id) => {
     setJournal(prev => ({ ...prev, bonus: (prev.bonus || []).filter(b => b.id !== id) }));
   };
-
-  // ─── Undo fait ────────────────────────────────────────────────────────────
 
   const handleUndoFait = (tache) => {
     if (tache.banque === 'projet') {
@@ -180,250 +223,377 @@ export default function Aujourdhui() {
   const tachesFaites    = (journal?.taches || []).filter(t => t.statut === 'fait');
   const tachesReportees = (journal?.taches || []).filter(t => t.statut === 'reporte');
 
+  const sportDone = journal?.sport || journal?.habitudes?.sport;
+  const sportLabel = journal?.sport?.seance_nom || journal?.sport?.notes ||
+    (journal?.sport?.type === 'club' ? 'Club MMA' : journal?.sport?.type === 'gym' ? 'Gym' : journal?.sport?.type === 'maison' ? 'Maison' : null) ||
+    (journal?.habitudes?.sport ? 'Sport' : null);
+
+  // Suggestion config for projets
+  const getSuggConfig = (s) => {
+    if (s.banque !== 'projet') return undefined;
+    return {
+      label: s.projet.nom,
+      color: s.projet.couleur,
+      bg: s.projet.couleur + '22',
+      emoji: s.projet.emoji || '📁',
+      getLabel: (t) => t.description,
+      getSub: () => null,
+      badge: () => null,
+    };
+  };
+
   return (
-    <div className="flex flex-col gap-4 px-4 pt-4 pb-nav">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+    <div className="flex flex-col gap-0 pb-nav">
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between px-5 pt-4 pb-1">
         <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-            {isYesterday ? 'Rétroactivité' : 'Bonjour 👋'}
+          <p className="uppercase tracking-widest text-[11px] font-bold mb-0.5" style={{ color: 'var(--ink-3)' }}>
+            {isYesterday ? 'Modification veille' : new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
-          <h1 className="text-xl font-bold text-gray-900 capitalize leading-tight">
-            {formatDateFR(viewDate)}
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            {isYesterday ? formatDateFR(viewDate) : "Bonjour 👋"}
           </h1>
         </div>
-        <button
-          onClick={() => setViewDate(isYesterday ? today() : yesterday())}
-          className="text-sm px-3 py-1.5 rounded-lg font-medium mt-1"
-          style={isYesterday
-            ? { background: 'var(--red)', color: 'var(--surface)' }
-            : { background: 'var(--line-2)', color: 'var(--ink-2)' }
-          }
-        >
-          {isYesterday ? '← Aujourd\'hui' : 'Hier'}
-        </button>
+        <div className="flex items-center gap-2 mt-1">
+          {isYesterday && (
+            <button
+              onClick={() => setViewDate(today())}
+              className="text-sm px-3 py-1.5 rounded-lg font-semibold btn-press"
+              style={{ background: 'var(--red)', color: 'white', fontSize: 12 }}
+            >
+              ← Aujourd'hui
+            </button>
+          )}
+          {!isYesterday && (
+            <button
+              onClick={() => setViewDate(yesterday())}
+              className="text-sm px-3 py-1.5 rounded-lg font-medium btn-press"
+              style={{ background: 'var(--line-2)', color: 'var(--ink-2)', fontSize: 12 }}
+            >
+              Hier
+            </button>
+          )}
+          <button
+            className="flex items-center justify-center btn-press"
+            style={{ width: 38, height: 38, borderRadius: 12, background: 'var(--surface)', boxShadow: 'var(--shadow-card)' }}
+          >
+            <Menu size={18} strokeWidth={2} color="var(--ink-2)" />
+          </button>
+        </div>
       </div>
 
       {/* Retroactivity banner */}
       {isYesterday && (
-        <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 flex items-center gap-3">
+        <div className="mx-4 mt-2 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 flex items-center gap-3">
           <span className="text-xl">📅</span>
           <p className="text-sm text-amber-800 font-semibold">Modification de la veille</p>
         </div>
       )}
 
-      {/* Nudge sport (hidden when viewing yesterday) */}
+      {/* Nudge sport */}
       {!isYesterday && noSportDays >= 3 && !journal?.sport && !journal?.habitudes?.sport && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
-          <span className="text-2xl">⚠️</span>
-          <p className="text-sm text-amber-800 font-medium">
-            {noSportDays} jours sans sport — c'est le moment de bouger !
-          </p>
+        <div className="mx-4 mt-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center gap-3">
+          <span className="text-xl">⚠️</span>
+          <p className="text-sm text-amber-800 font-medium">{noSportDays} jours sans sport — bouge !</p>
         </div>
       )}
 
-      {/* Suggestions */}
-      <section>
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Suggestions du jour
-        </h2>
-        <div className="flex flex-col gap-3">
-          <SuggestionCard
-            banque="tiktok"
-            item={nextTiktok}
-            exhaustedToday={!nextTiktok && hasAvailableItems('tiktok') && skipped.some(s => s.startsWith('tiktok_'))}
-            onFait={(item, time) => handleFait('tiktok', item, time)}
-            onReporte={(item) => handleReporte('tiktok', item)}
-            onAutre={(item, texte) => handleAutre('tiktok', item, texte)}
-            onSuivante={(item) => handleSuivante('tiktok', item)}
-          />
-          <SuggestionCard
-            banque="fightfocus"
-            item={nextFightfocus}
-            exhaustedToday={!nextFightfocus && hasAvailableItems('fightfocus') && skipped.some(s => s.startsWith('fightfocus_'))}
-            onFait={(item, time) => handleFait('fightfocus', item, time)}
-            onReporte={(item) => handleReporte('fightfocus', item)}
-            onAutre={(item, texte) => handleAutre('fightfocus', item, texte)}
-            onSuivante={(item) => handleSuivante('fightfocus', item)}
-          />
-          <SuggestionCard
-            banque="marque"
-            item={nextMarque}
-            exhaustedToday={!nextMarque && hasAvailableItems('marque') && skipped.some(s => s.startsWith('marque_'))}
-            onFait={(item, time) => handleFait('marque', item, time)}
-            onReporte={(item) => handleReporte('marque', item)}
-            onAutre={(item, texte) => handleAutre('marque', item, texte)}
-            onSuivante={(item) => handleSuivante('marque', item)}
-          />
+      {/* ── Habits strip ───────────────────────────────────────────────── */}
+      <div
+        className="flex gap-2 px-5 mt-4 pb-1"
+        style={{ overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+      >
+        {/* Prières */}
+        <button
+          className="flex items-center gap-1.5 shrink-0 btn-press"
+          style={{
+            background: (hab.prieres || 0) > 0 ? 'var(--red-50)' : 'var(--surface)',
+            border: `1px solid ${(hab.prieres || 0) > 0 ? '#F4D5D1' : 'var(--line)'}`,
+            borderRadius: 14, padding: '8px 12px',
+            color: (hab.prieres || 0) > 0 ? 'var(--red)' : 'var(--ink-2)',
+            fontSize: 13, fontWeight: 500,
+          }}
+          onClick={() => updateHabitude('prieres', (hab.prieres || 0) + 1)}
+        >
+          <span>🙏</span>
+          <span>{hab.prieres || 0}</span>
+        </button>
 
-          {activeProjects.map(projet => {
-            const nextTask = getNextProjetTask(projet, skipped);
-            const bg = projet.couleur + '22';
-            return (
-              <SuggestionCard
-                key={projet.id}
-                banque="projet"
-                item={nextTask}
-                config={{
-                  label: projet.nom,
-                  color: projet.couleur,
-                  bg,
-                  emoji: projet.emoji || '📁',
-                  getLabel: (t) => t.description,
-                  getSub: () => null,
-                  badge: () => null,
-                }}
-                onFait={(tache, time) => handleProjetFait(projet, tache, time)}
-                onReporte={(tache) => handleProjetReporte(projet, tache)}
-                onAutre={(tache, texte) => handleProjetAutre(projet, tache, texte)}
-                onSuivante={(tache) => handleProjetSuivante(projet, tache)}
-              />
-            );
-          })}
+        {/* Sport */}
+        <button
+          className="flex items-center gap-1.5 shrink-0 btn-press"
+          style={{
+            background: sportDone ? 'var(--green-soft)' : 'var(--surface)',
+            border: `1px solid ${sportDone ? '#86EFAC' : 'var(--line)'}`,
+            borderRadius: 14, padding: '8px 12px',
+            color: sportDone ? 'var(--green)' : 'var(--ink-2)',
+            fontSize: 13, fontWeight: 500,
+          }}
+          onClick={() => setShowSportSheet(true)}
+        >
+          <span>🥊</span>
+          <span>{sportDone ? `✓ ${sportLabel || 'Fait'}` : 'Sport'}</span>
+        </button>
+
+        {/* Cigarettes */}
+        <button
+          className="flex items-center gap-1.5 shrink-0 btn-press"
+          style={{
+            background: (hab.cigarettes || 0) === 0 ? 'var(--surface)' : 'var(--orange-soft)',
+            border: `1px solid ${(hab.cigarettes || 0) === 0 ? 'var(--line)' : '#F6C89A'}`,
+            borderRadius: 14, padding: '8px 12px',
+            color: (hab.cigarettes || 0) === 0 ? 'var(--green)' : 'var(--orange)',
+            fontSize: 13, fontWeight: 500,
+          }}
+          onClick={() => updateHabitude('cigarettes', (hab.cigarettes || 0) + 1)}
+        >
+          <span>🚬</span>
+          <span>{hab.cigarettes || 0}</span>
+        </button>
+
+        {/* Note */}
+        <button
+          className="flex items-center gap-1.5 shrink-0 btn-press"
+          style={{
+            background: hab.note ? 'var(--red-50)' : 'var(--surface)',
+            border: `1px solid ${hab.note ? '#F4D5D1' : 'var(--line)'}`,
+            borderRadius: 14, padding: '8px 12px',
+            color: hab.note ? 'var(--ink-2)' : 'var(--ink-3)',
+            fontSize: 13, fontWeight: 500, maxWidth: 140,
+          }}
+          onClick={() => setShowNoteModal(true)}
+        >
+          <span>📝</span>
+          <span className="truncate">{hab.note || 'Note…'}</span>
+        </button>
+      </div>
+
+      {/* ── À faire maintenant ─────────────────────────────────────────── */}
+      <section className="px-4 mt-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>
+            À faire maintenant
+          </p>
+          <span className="text-[11px] font-semibold" style={{ color: 'var(--ink-3)' }}>
+            {allSuggestions.length > 0 ? `1/${allSuggestions.length}` : '0/0'}
+          </span>
         </div>
+
+        {hero ? (
+          <SuggestionCard
+            hero
+            fadingOut={heroFading}
+            banque={hero.banque}
+            item={hero.item}
+            config={getSuggConfig(hero)}
+            onFait={handleHeroFait}
+            onReporte={() => handleSuggestionReporte(hero)}
+            onAutre={(_, texte) => handleSuggestionAutre(hero, texte)}
+            onSuivante={() => handleSuggestionSuivante(hero)}
+          />
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-2">🎉</div>
+            <p className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Toutes les tâches sont accomplies !</p>
+          </div>
+        )}
       </section>
 
-      {/* J'ai aussi fait */}
-      <section>
+      {/* ── Suite ──────────────────────────────────────────────────────── */}
+      {queue.length > 0 && (
+        <section className="px-4 mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>Suite</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            {queue.map((s, i) => {
+              const cfg = getSuggConfig(s) || { color: BANQUE_COLOR[s.banque], emoji: BANQUE_EMOJI[s.banque], label: s.banque };
+              const label = s.banque === 'projet' ? s.item.description
+                : s.banque === 'tiktok' ? s.item.titre
+                : s.item.code ? `${s.item.code} — ${s.item.description}` : s.item.description;
+              return (
+                <div
+                  key={i}
+                  className="flex items-center gap-3"
+                  style={{
+                    background: 'var(--surface)',
+                    borderRadius: 12,
+                    padding: '10px 12px',
+                    boxShadow: 'var(--shadow-card)',
+                    borderLeft: `3px solid ${cfg.color}`,
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>{cfg.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold uppercase" style={{ color: cfg.color, letterSpacing: '0.06em' }}>
+                      {cfg.label || s.banque}
+                    </p>
+                    <p className="text-[13px] font-medium truncate" style={{ color: 'var(--ink-2)' }}>{label}</p>
+                  </div>
+                  <ChevronRight size={16} strokeWidth={2} color="var(--ink-3)" />
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── J'ai aussi fait (bonus) ─────────────────────────────────────── */}
+      <section className="px-4 mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>
             J'ai aussi fait
-          </h2>
-          <button onClick={() => setShowBonusInput(true)}
-            className="w-8 h-8 rounded-full text-white text-lg font-bold flex items-center justify-center"
-            style={{ background: 'var(--red)' }}>
+          </p>
+          <button
+            onClick={() => setShowBonusInput(true)}
+            className="w-7 h-7 rounded-full text-white text-lg font-bold flex items-center justify-center btn-press"
+            style={{ background: 'var(--red)', fontSize: 18, lineHeight: 1 }}
+          >
             +
           </button>
         </div>
 
         {showBonusInput && (
           <div className="flex gap-2 mb-2">
-            <input autoFocus value={bonusInput} onChange={e => setBonusInput(e.target.value)}
+            <input
+              autoFocus value={bonusInput}
+              onChange={e => setBonusInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addBonus(); if (e.key === 'Escape') setShowBonusInput(false); }}
               placeholder="Ce que tu as accompli..."
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-            <button onClick={addBonus} className="px-3 py-2 rounded-lg text-white text-sm font-medium" style={{ background: 'var(--red)' }}>
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <button onClick={addBonus} className="px-3 py-2 rounded-lg text-white text-sm font-medium btn-press"
+              style={{ background: 'var(--red)' }}>
               OK
             </button>
           </div>
         )}
 
         {(journal?.bonus || []).length === 0 && !showBonusInput && (
-          <p className="text-sm text-gray-400 italic">Rien encore — ajoute une tâche bonus !</p>
+          <p className="text-sm italic" style={{ color: 'var(--ink-3)' }}>Rien encore — ajoute une tâche bonus !</p>
         )}
         <div className="flex flex-col gap-2">
           {(journal?.bonus || []).map(b => (
             <div key={b.id} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-card">
-              <span className="text-green-500 text-sm">✓</span>
-              <span className="text-sm text-gray-700 flex-1">{b.texte}</span>
-              <button
-                onClick={() => removeBonus(b.id)}
-                className="text-gray-300 text-base px-1 active:text-red-400"
-              >
-                🗑️
-              </button>
+              <span className="text-sm" style={{ color: 'var(--green)' }}>✓</span>
+              <span className="text-sm flex-1" style={{ color: 'var(--ink-2)' }}>{b.texte}</span>
+              <button onClick={() => removeBonus(b.id)} className="text-gray-300 px-1 active:text-red-400">🗑️</button>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Habitudes */}
-      <section>
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Habitudes
-        </h2>
-        <Card>
-          <div className="flex items-center justify-between py-2 border-b border-gray-50">
-            <span className="text-sm font-medium text-gray-700">🙏 Prières</span>
-            <div className="flex items-center gap-3">
-              <button onClick={() => updateHabitude('prieres', Math.max(0, (hab.prieres || 0) - 1))}
-                className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold text-lg flex items-center justify-center">−</button>
-              <span className="text-lg font-bold w-6 text-center" style={{ color: 'var(--red)' }}>{hab.prieres || 0}</span>
-              <button onClick={() => updateHabitude('prieres', (hab.prieres || 0) + 1)}
-                className="w-8 h-8 rounded-full text-white font-bold text-lg flex items-center justify-center"
-                style={{ background: 'var(--red)' }}>+</button>
-            </div>
-          </div>
-
-          <SportModule
-            journal={journal}
-            onSportSave={handleSportSave}
-            onSportClear={handleSportClear}
-            setAgenda={setAgenda}
-            viewDate={formatDate(viewDate)}
-          />
-
-          <div className="flex items-center justify-between py-2 border-b border-gray-50">
-            <span className="text-sm font-medium text-gray-700">🚬 Cigarettes</span>
-            <div className="flex items-center gap-3">
-              <button onClick={() => updateHabitude('cigarettes', Math.max(0, (hab.cigarettes || 0) - 1))}
-                className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold text-lg flex items-center justify-center">−</button>
-              <span className={`text-lg font-bold w-6 text-center ${(hab.cigarettes || 0) === 0 ? 'text-green-500' : 'text-orange-500'}`}>
-                {hab.cigarettes || 0}
-              </span>
-              <button onClick={() => updateHabitude('cigarettes', (hab.cigarettes || 0) + 1)}
-                className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold text-lg flex items-center justify-center">+</button>
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <span className="text-sm font-medium text-gray-700 block mb-1.5">📝 Note libre</span>
-            <textarea value={hab.note || ''} onChange={e => updateHabitude('note', e.target.value)}
-              placeholder="Comment s'est passée ta journée ?"
-              className="w-full text-sm border border-gray-100 rounded-lg px-3 py-2 resize-none bg-gray-50" rows={3} />
-          </div>
-        </Card>
-      </section>
-
-      {/* Résumé */}
+      {/* ── Déjà fait aujourd'hui ──────────────────────────────────────── */}
       {(tachesFaites.length > 0 || tachesReportees.length > 0) && (
-        <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Résumé du jour</h2>
+        <section className="px-4 mt-6 mb-2">
+          <p className="uppercase tracking-widest text-[11px] font-bold mb-3" style={{ color: 'var(--ink-3)' }}>
+            Déjà fait aujourd'hui · {tachesFaites.length}
+          </p>
           <Card>
-            {tachesFaites.length > 0 && (
-              <div className="mb-3">
-                <p className="text-xs text-green-600 font-semibold mb-1.5">✅ Accompli</p>
-                {tachesFaites.map((t, i) => {
-                  const color = t.banque === 'tiktok' ? 'var(--red)'
-                    : t.banque === 'fightfocus' ? 'var(--cyan)'
-                    : t.banque === 'marque' ? 'var(--orange)'
-                    : t.banque === 'projet'
-                    ? (projets.find(p => p.id === t.projetId)?.couleur || 'var(--ink-3)')
-                    : 'var(--ink-3)';
-                  return (
-                    <div key={i} className="flex items-center gap-2 mb-1.5">
-                      <span className="text-xs shrink-0" style={{ color }}>●</span>
-                      <span className="text-xs text-gray-600 leading-snug flex-1">{t.label}</span>
-                      <button
-                        onClick={() => handleUndoFait(t)}
-                        className="text-xs text-gray-400 px-1.5 py-0.5 rounded bg-gray-100 active:bg-gray-200 shrink-0"
-                      >
-                        ↩️
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            {tachesFaites.map((t, i) => {
+              const color = t.banque === 'tiktok' ? 'var(--red)'
+                : t.banque === 'fightfocus' ? 'var(--cyan)'
+                : t.banque === 'marque' ? 'var(--orange)'
+                : t.banque === 'projet'
+                ? (projets.find(p => p.id === t.projetId)?.couleur || 'var(--ink-3)')
+                : 'var(--ink-3)';
+              return (
+                <div key={i} className="flex items-center gap-2 mb-2">
+                  <span
+                    className="shrink-0 flex items-center justify-center"
+                    style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--green-soft)' }}
+                  >
+                    <span style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700 }}>✓</span>
+                  </span>
+                  <span className="text-[13px] flex-1 leading-snug" style={{ color: 'var(--ink-2)', textDecoration: 'line-through', textDecorationColor: '#CBD5E1' }}>
+                    {t.label}
+                  </span>
+                  <button
+                    onClick={() => handleUndoFait(t)}
+                    className="text-xs px-1.5 py-0.5 rounded btn-press shrink-0"
+                    style={{ background: 'var(--line-2)', color: 'var(--ink-3)', fontSize: 11 }}
+                  >
+                    ↩️
+                  </button>
+                </div>
+              );
+            })}
             {tachesReportees.length > 0 && (
-              <div>
-                <p className="text-xs text-gray-400 font-semibold mb-1.5">🔄 Reporté</p>
+              <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--line)' }}>
+                <p className="text-[10px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>🔄 Reporté</p>
                 {tachesReportees.map((t, i) => (
                   <div key={i} className="flex items-start gap-2 mb-1">
-                    <span className="text-xs mt-0.5 text-gray-300">●</span>
-                    <span className="text-xs text-gray-400 leading-snug">{t.label}</span>
+                    <span className="text-xs mt-0.5" style={{ color: 'var(--line)' }}>●</span>
+                    <span className="text-xs leading-snug" style={{ color: 'var(--ink-3)' }}>{t.label}</span>
                   </div>
                 ))}
               </div>
             )}
-            <div className="mt-3 pt-3 border-t border-gray-50 flex gap-4 text-xs text-gray-500">
-              <span>🙏 {hab.prieres || 0} prières</span>
-              <span>{(journal?.sport || hab.sport) ? `🥊 ${journal?.sport?.seance_nom || 'Sport ✓'}` : '🥊 Sport —'}</span>
+            <div className="mt-3 pt-3 border-t flex gap-4 text-xs" style={{ borderColor: 'var(--line)', color: 'var(--ink-3)' }}>
+              <span>🙏 {hab.prieres || 0}</span>
+              <span>{sportDone ? `🥊 ${sportLabel || '✓'}` : '🥊 —'}</span>
               <span>🚬 {hab.cigarettes || 0}</span>
             </div>
           </Card>
         </section>
       )}
+
+      {/* ── Sport bottom sheet ─────────────────────────────────────────── */}
+      {showSportSheet && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div
+            className="absolute inset-0"
+            style={{ background: 'rgba(15,23,42,.4)' }}
+            onClick={() => setShowSportSheet(false)}
+          />
+          <div
+            className="relative w-full"
+            style={{
+              maxWidth: 480,
+              background: 'var(--surface)',
+              borderRadius: '24px 24px 0 0',
+              paddingTop: 12,
+              paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
+            }}
+          >
+            <div className="w-8 h-1 rounded-full mx-auto mb-4" style={{ background: 'var(--line)' }} />
+            <div className="px-4">
+              <SportModule
+                journal={journal}
+                onSportSave={handleSportSave}
+                onSportClear={handleSportClear}
+                setAgenda={setAgenda}
+                viewDate={formatDate(viewDate)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Note modal ─────────────────────────────────────────────────── */}
+      <Modal
+        open={showNoteModal}
+        onClose={() => setShowNoteModal(false)}
+        title="📝 Note du jour"
+        footer={
+          <button
+            onClick={() => setShowNoteModal(false)}
+            className="w-full py-2.5 rounded-lg font-medium text-sm btn-press"
+            style={{ background: 'var(--red)', color: 'white' }}
+          >
+            Enregistrer
+          </button>
+        }
+      >
+        <textarea
+          autoFocus
+          value={hab.note || ''}
+          onChange={e => updateHabitude('note', e.target.value)}
+          placeholder="Comment s'est passée ta journée ?"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
+          rows={5}
+        />
+      </Modal>
     </div>
   );
 }
