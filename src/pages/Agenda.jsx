@@ -14,7 +14,7 @@ function timeToMinutes(t) {
 function EventBlock({ event, onClick }) {
   const top = ((timeToMinutes(event.heureDebut) - 360) / 60) * 56;
   const height = Math.max(((timeToMinutes(event.heureFin) - timeToMinutes(event.heureDebut)) / 60) * 56, 28);
-  const color = event.color || '#C0392B';
+  const color = event.color || 'var(--red)';
 
   return (
     <div
@@ -112,7 +112,7 @@ export default function Agenda() {
             <div key={formatDate(d)} className="flex-1 text-center py-1.5">
               <div className="text-[10px] text-gray-400 uppercase">{formatDayShort(d).split(' ')[0]}</div>
               <div className={`text-sm font-semibold ${isToday ? 'text-white rounded-full w-6 h-6 flex items-center justify-center mx-auto' : 'text-gray-700'}`}
-                style={isToday ? { background: '#C0392B' } : {}}>
+                style={isToday ? { background: 'var(--red)' } : {}}>
                 {d.getDate()}
               </div>
             </div>
@@ -161,7 +161,7 @@ export default function Agenda() {
         footer={
           <div className="flex gap-2 w-full">
             {editEvent && (
-              <button onClick={deleteEvent} className="py-2.5 px-4 rounded-lg bg-red-50 text-red-kick font-medium text-sm" style={{ color: '#C0392B' }}>
+              <button onClick={deleteEvent} className="py-2.5 px-4 rounded-lg bg-red-50 text-red-kick font-medium text-sm" style={{ color: 'var(--red)' }}>
                 Supprimer
               </button>
             )}
@@ -169,7 +169,7 @@ export default function Agenda() {
               onClick={saveEvent}
               disabled={!form.titre.trim()}
               className="flex-1 py-2.5 rounded-lg text-white font-medium text-sm disabled:opacity-40"
-              style={{ background: '#C0392B' }}
+              style={{ background: 'var(--red)' }}
             >
               Enregistrer
             </button>
@@ -225,7 +225,7 @@ export default function Agenda() {
             <button
               onClick={() => setForm(f => ({ ...f, recurrent: !f.recurrent }))}
               className={`w-12 h-6 rounded-full relative transition-colors ${form.recurrent ? '' : 'bg-gray-200'}`}
-              style={{ background: form.recurrent ? '#C0392B' : undefined }}
+              style={{ background: form.recurrent ? 'var(--red)' : undefined }}
             >
               <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.recurrent ? 'translate-x-6' : 'translate-x-0.5'}`} />
             </button>

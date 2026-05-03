@@ -11,10 +11,10 @@ import { useProjets, PROJET_PALETTE } from '../hooks/useProjets';
 import Modal from '../components/Modal';
 
 const TABS = [
-  { id: 'tiktok',     label: 'TikTok',     color: '#C0392B', bg: '#FEF2F2' },
-  { id: 'fightfocus', label: 'FightFocus', color: '#00b4d8', bg: '#E0F7FA' },
-  { id: 'marque',     label: 'Marque',     color: '#E67E22', bg: '#FFF3E0' },
-  { id: 'projets',    label: 'Projets',    color: '#8E44AD', bg: '#F3E5F5' },
+  { id: 'tiktok',     label: 'TikTok',     color: 'var(--red)',    bg: 'var(--red-50)' },
+  { id: 'fightfocus', label: 'FightFocus', color: 'var(--cyan)',   bg: 'var(--cyan-soft)' },
+  { id: 'marque',     label: 'Marque',     color: 'var(--orange)', bg: 'var(--orange-soft)' },
+  { id: 'projets',    label: 'Projets',    color: '#8E44AD',       bg: '#F3E5F5' },
 ];
 
 // ─── Item context menu ──────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ function ItemMenu({ open, onClose, itemLabel, color, onModifier, onDejaFait, onS
             <button
               onClick={() => { onDejaFait(); handleClose(); }}
               className="flex-1 py-2.5 rounded-lg text-white font-medium text-sm"
-              style={{ background: '#C0392B' }}
+              style={{ background: 'var(--red)' }}
             >
               Confirmer
             </button>
@@ -59,7 +59,7 @@ function ItemMenu({ open, onClose, itemLabel, color, onModifier, onDejaFait, onS
           </button>
           <button onClick={() => { onSupprimer(); handleClose(); }}
             className="w-full text-left py-3 px-3 rounded-xl hover:bg-red-50 text-sm font-medium flex items-center gap-3"
-            style={{ color: '#C0392B' }}>
+            style={{ color: 'var(--red)' }}>
             <span>🗑️</span> Supprimer
           </button>
         </div>
@@ -248,7 +248,7 @@ function BanqueList({ banque, items, setItems }) {
   return (
     <>
       {/* Header row */}
-      <div className="flex items-center justify-between mb-2 sticky top-0 bg-[#FAFAFA] pt-1 pb-2 z-10">
+      <div className="flex items-center justify-between mb-2 sticky top-0 bg-bg pt-1 pb-2 z-10">
         <span className="text-sm text-gray-500">{active.length} à faire · {done.length} fait</span>
         <button onClick={openAdd}
           className="w-8 h-8 rounded-full text-white text-lg font-bold flex items-center justify-center shadow-md"
@@ -447,7 +447,7 @@ function ProjetCard({ projet, onEdit, onDelete, onUpdateTaches }) {
           <button onClick={() => onEdit(projet)} className="w-7 h-7 flex items-center justify-center text-gray-400 text-xs rounded hover:bg-gray-100">
             ✏️
           </button>
-          <button onClick={() => onDelete(projet.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-xs" style={{ color: '#C0392B' }}>
+          <button onClick={() => onDelete(projet.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-xs" style={{ color: 'var(--red)' }}>
             🗑️
           </button>
         </div>
@@ -519,7 +519,7 @@ function ProjetsList({ projets, setProjets }) {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-3 sticky top-0 bg-[#FAFAFA] pt-1 pb-2 z-10">
+      <div className="flex items-center justify-between mb-3 sticky top-0 bg-bg pt-1 pb-2 z-10">
         <span className="text-sm text-gray-500">{(projets || []).length} projet{(projets || []).length !== 1 ? 's' : ''}</span>
         <button onClick={openAdd}
           className="w-8 h-8 rounded-full text-white text-lg font-bold flex items-center justify-center shadow-md"
@@ -615,14 +615,14 @@ export default function Banques() {
             className="flex-shrink-0 flex-1 py-3 px-2 text-sm font-semibold transition-colors border-b-2 min-w-0"
             style={activeTab === t.id
               ? { borderColor: t.color, color: t.color }
-              : { borderColor: 'transparent', color: '#9CA3AF' }}
+              : { borderColor: 'transparent', color: 'var(--ink-3)' }}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 overflow-auto px-4 pt-3 pb-nav" style={{ background: '#FAFAFA' }}>
+      <div className="flex-1 overflow-auto px-4 pt-3 pb-nav" style={{ background: 'var(--bg)' }}>
         {activeTab !== 'projets' ? (
           <BanqueList
             key={activeTab}

@@ -40,8 +40,8 @@ export default function SeanceSelector({ open, lieu, onSelect, onClose }) {
               onClick={() => setDureeFilter(dureeFilter === key ? null : key)}
               className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors"
               style={dureeFilter === key
-                ? { background: '#27AE60', color: '#fff' }
-                : { background: '#F3F4F6', color: '#374151' }
+                ? { background: 'var(--green)', color: '#fff' }
+                : { background: 'var(--line-2)', color: 'var(--ink-2)' }
               }
             >
               {label}
@@ -75,7 +75,7 @@ export default function SeanceSelector({ open, lieu, onSelect, onClose }) {
               <button
                 onClick={() => onSelect(s)}
                 className="w-full py-2 rounded-lg text-sm font-medium text-white active:opacity-90 transition-opacity"
-                style={{ background: '#27AE60' }}
+                style={{ background: 'var(--green)' }}
               >
                 Lancer cette séance
               </button>

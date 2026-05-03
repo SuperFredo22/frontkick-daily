@@ -54,7 +54,7 @@ export default function Stats() {
       <Card className="flex items-center gap-3">
         <div className="text-4xl">🔥</div>
         <div>
-          <div className="text-3xl font-bold" style={{ color: '#C0392B' }}>{streak}</div>
+          <div className="text-3xl font-bold" style={{ color: 'var(--red)' }}>{streak}</div>
           <div className="text-sm text-gray-500">jours consécutifs avec au moins 1 tâche</div>
         </div>
       </Card>
@@ -64,8 +64,8 @@ export default function Stats() {
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Ce mois-ci</h2>
         <div className="flex gap-2">
           <StatBox label="Vidéos" value={monthStats.tiktok} color="#C0392B" sub="publiées" />
-          <StatBox label="FightFocus" value={monthStats.fightfocus} color="#00b4d8" sub="tâches" />
-          <StatBox label="Marque" value={monthStats.marque} color="#E67E22" sub="actions" />
+          <StatBox label="FightFocus" value={monthStats.fightfocus} color="var(--cyan)" sub="tâches" />
+          <StatBox label="Marque" value={monthStats.marque} color="var(--orange)" sub="actions" />
         </div>
 
         {/* Project stats */}
@@ -92,7 +92,7 @@ export default function Stats() {
         <Card className="p-3">
           <ResponsiveContainer width="100%" height={100}>
             <BarChart data={chartData} onClick={handleBarClick} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
+              <XAxis dataKey="name" tick={{ fontSize: 8, fill: 'var(--ink-3)' }} tickLine={false} interval={6} />
               <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
                 formatter={(v) => [v, 'Prières']} />
               <Bar dataKey="prieres" fill="#C0392B" radius={[3, 3, 0, 0]} maxBarSize={20} />
@@ -109,10 +109,10 @@ export default function Stats() {
         <Card className="p-3">
           <ResponsiveContainer width="100%" height={80}>
             <BarChart data={chartData} onClick={handleBarClick} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
+              <XAxis dataKey="name" tick={{ fontSize: 8, fill: 'var(--ink-3)' }} tickLine={false} interval={6} />
               <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
                 formatter={(v) => [v ? 'Oui' : 'Non', 'Sport']} />
-              <Bar dataKey="sport" fill="#00b4d8" radius={[3, 3, 0, 0]} maxBarSize={20} />
+              <Bar dataKey="sport" fill="var(--cyan)" radius={[3, 3, 0, 0]} maxBarSize={20} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -131,33 +131,33 @@ export default function Stats() {
       <section>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Sport ce mois-ci</h2>
         <div className="flex gap-2 mb-2">
-          <StatBox label="Séances" value={sportMonth.total} color="#27AE60" />
-          <StatBox label="Minutes" value={sportMonth.totalDuree} color="#27AE60" sub="total" />
-          <StatBox label="Streak" value={sportStreak} color="#27AE60" sub="jours" />
+          <StatBox label="Séances" value={sportMonth.total} color="var(--green)" />
+          <StatBox label="Minutes" value={sportMonth.totalDuree} color="var(--green)" sub="total" />
+          <StatBox label="Streak" value={sportStreak} color="var(--green)" sub="jours" />
         </div>
         {sportMonth.total > 0 && (
           <div className="flex gap-2">
             {sportMonth.club > 0 && (
               <div className="flex-1 bg-white rounded-card shadow-card px-3 py-2 text-center">
-                <div className="text-lg font-bold" style={{ color: '#27AE60' }}>{sportMonth.club}</div>
+                <div className="text-lg font-bold" style={{ color: 'var(--green)' }}>{sportMonth.club}</div>
                 <div className="text-[10px] text-gray-500">🥊 Club</div>
               </div>
             )}
             {sportMonth.gym > 0 && (
               <div className="flex-1 bg-white rounded-card shadow-card px-3 py-2 text-center">
-                <div className="text-lg font-bold" style={{ color: '#27AE60' }}>{sportMonth.gym}</div>
+                <div className="text-lg font-bold" style={{ color: 'var(--green)' }}>{sportMonth.gym}</div>
                 <div className="text-[10px] text-gray-500">🏋️ Gym</div>
               </div>
             )}
             {sportMonth.maison > 0 && (
               <div className="flex-1 bg-white rounded-card shadow-card px-3 py-2 text-center">
-                <div className="text-lg font-bold" style={{ color: '#27AE60' }}>{sportMonth.maison}</div>
+                <div className="text-lg font-bold" style={{ color: 'var(--green)' }}>{sportMonth.maison}</div>
                 <div className="text-[10px] text-gray-500">🏠 Maison</div>
               </div>
             )}
             {sportMonth.autre > 0 && (
               <div className="flex-1 bg-white rounded-card shadow-card px-3 py-2 text-center">
-                <div className="text-lg font-bold" style={{ color: '#27AE60' }}>{sportMonth.autre}</div>
+                <div className="text-lg font-bold" style={{ color: 'var(--green)' }}>{sportMonth.autre}</div>
                 <div className="text-[10px] text-gray-500">✅ Autre</div>
               </div>
             )}
@@ -173,7 +173,7 @@ export default function Stats() {
         <Card className="p-3">
           <ResponsiveContainer width="100%" height={80}>
             <BarChart data={sportChartData} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
+              <XAxis dataKey="name" tick={{ fontSize: 8, fill: 'var(--ink-3)' }} tickLine={false} interval={6} />
               <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
                 formatter={(v, name, props) => [
                   props.payload.did ? (props.payload.duree ? `${props.payload.duree} min` : 'Oui') : 'Non',
@@ -181,7 +181,7 @@ export default function Stats() {
                 ]} />
               <Bar dataKey="did" radius={[3, 3, 0, 0]} maxBarSize={20}>
                 {sportChartData.map((entry, i) => (
-                  <Cell key={i} fill={entry.did ? '#27AE60' : '#E5E7EB'} />
+                  <Cell key={i} fill={entry.did ? 'var(--green)' : 'var(--line)'} />
                 ))}
               </Bar>
             </BarChart>
@@ -197,7 +197,7 @@ export default function Stats() {
         <Card className="p-3">
           <ResponsiveContainer width="100%" height={100}>
             <LineChart data={chartData} onClick={handleBarClick} margin={{ top: 4, right: 4, left: -30, bottom: 0 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#9CA3AF' }} tickLine={false} interval={6} />
+              <XAxis dataKey="name" tick={{ fontSize: 8, fill: 'var(--ink-3)' }} tickLine={false} interval={6} />
               <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
                 formatter={(v) => [v, 'Tâches']} />
               <Line type="monotone" dataKey="tachesFaites" stroke="#C0392B" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />

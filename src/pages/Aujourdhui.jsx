@@ -67,7 +67,7 @@ export default function Aujourdhui() {
   const handleFait = (banque, item, timeSlot) => {
     markDone(banque, item.id);
     const label = makeItemLabel(banque, item);
-    const colors = { tiktok: '#C0392B', fightfocus: '#00b4d8', marque: '#E67E22' };
+    const colors = { tiktok: 'var(--red)', fightfocus: 'var(--cyan)', marque: 'var(--orange)' };
     addJournalTache({ id: item.id, banque, label, statut: 'fait', heure: timeSlot });
     addAgendaEvent(label, banque, colors[banque], timeSlot);
   };
@@ -196,8 +196,8 @@ export default function Aujourdhui() {
           onClick={() => setViewDate(isYesterday ? today() : yesterday())}
           className="text-sm px-3 py-1.5 rounded-lg font-medium mt-1"
           style={isYesterday
-            ? { background: '#C0392B', color: '#fff' }
-            : { background: '#F3F4F6', color: '#374151' }
+            ? { background: 'var(--red)', color: 'var(--surface)' }
+            : { background: 'var(--line-2)', color: 'var(--ink-2)' }
           }
         >
           {isYesterday ? '← Aujourd\'hui' : 'Hier'}
@@ -291,7 +291,7 @@ export default function Aujourdhui() {
           </h2>
           <button onClick={() => setShowBonusInput(true)}
             className="w-8 h-8 rounded-full text-white text-lg font-bold flex items-center justify-center"
-            style={{ background: '#C0392B' }}>
+            style={{ background: 'var(--red)' }}>
             +
           </button>
         </div>
@@ -302,7 +302,7 @@ export default function Aujourdhui() {
               onKeyDown={e => { if (e.key === 'Enter') addBonus(); if (e.key === 'Escape') setShowBonusInput(false); }}
               placeholder="Ce que tu as accompli..."
               className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-            <button onClick={addBonus} className="px-3 py-2 rounded-lg text-white text-sm font-medium" style={{ background: '#C0392B' }}>
+            <button onClick={addBonus} className="px-3 py-2 rounded-lg text-white text-sm font-medium" style={{ background: 'var(--red)' }}>
               OK
             </button>
           </div>
@@ -338,10 +338,10 @@ export default function Aujourdhui() {
             <div className="flex items-center gap-3">
               <button onClick={() => updateHabitude('prieres', Math.max(0, (hab.prieres || 0) - 1))}
                 className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold text-lg flex items-center justify-center">−</button>
-              <span className="text-lg font-bold w-6 text-center" style={{ color: '#C0392B' }}>{hab.prieres || 0}</span>
+              <span className="text-lg font-bold w-6 text-center" style={{ color: 'var(--red)' }}>{hab.prieres || 0}</span>
               <button onClick={() => updateHabitude('prieres', (hab.prieres || 0) + 1)}
                 className="w-8 h-8 rounded-full text-white font-bold text-lg flex items-center justify-center"
-                style={{ background: '#C0392B' }}>+</button>
+                style={{ background: 'var(--red)' }}>+</button>
             </div>
           </div>
 
@@ -384,12 +384,12 @@ export default function Aujourdhui() {
               <div className="mb-3">
                 <p className="text-xs text-green-600 font-semibold mb-1.5">✅ Accompli</p>
                 {tachesFaites.map((t, i) => {
-                  const color = t.banque === 'tiktok' ? '#C0392B'
-                    : t.banque === 'fightfocus' ? '#00b4d8'
-                    : t.banque === 'marque' ? '#E67E22'
+                  const color = t.banque === 'tiktok' ? 'var(--red)'
+                    : t.banque === 'fightfocus' ? 'var(--cyan)'
+                    : t.banque === 'marque' ? 'var(--orange)'
                     : t.banque === 'projet'
-                    ? (projets.find(p => p.id === t.projetId)?.couleur || '#666')
-                    : '#666';
+                    ? (projets.find(p => p.id === t.projetId)?.couleur || 'var(--ink-3)')
+                    : 'var(--ink-3)';
                   return (
                     <div key={i} className="flex items-center gap-2 mb-1.5">
                       <span className="text-xs shrink-0" style={{ color }}>●</span>

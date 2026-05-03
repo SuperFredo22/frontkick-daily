@@ -17,7 +17,7 @@ export default function BottomNav({ current, onChange }) {
             className={`flex-1 flex flex-col items-center py-3 gap-1 text-xs font-medium transition-colors ${
               current === tab.id ? 'text-red-kick' : 'text-gray-400'
             }`}
-            style={{ color: current === tab.id ? '#C0392B' : '#9CA3AF' }}
+            style={{ color: current === tab.id ? 'var(--red)' : 'var(--ink-3)' }}
           >
             <span className="text-xl leading-none">{tab.icon}</span>
             <span className="text-[10px]">{tab.label}</span>

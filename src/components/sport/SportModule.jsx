@@ -17,7 +17,7 @@ function ClubModal({ open, onClose, onSave }) {
         <button
           onClick={() => { onSave(notes); setNotes(''); }}
           className="w-full py-2.5 rounded-lg text-white font-medium text-sm"
-          style={{ background: '#27AE60' }}
+          style={{ background: 'var(--green)' }}
         >
           Enregistrer
         </button>
@@ -52,7 +52,7 @@ function AutreModal({ open, onClose, onSave }) {
           onClick={() => { if (texte.trim()) { onSave(texte.trim()); setTexte(''); } }}
           disabled={!texte.trim()}
           className="w-full py-2.5 rounded-lg text-white font-medium text-sm disabled:opacity-40"
-          style={{ background: '#27AE60' }}
+          style={{ background: 'var(--green)' }}
         >
           Enregistrer
         </button>
@@ -136,7 +136,7 @@ export default function SportModule({ journal, onSportSave, onSportClear, setAge
         heureDebut: timeSlot.debut,
         heureFin: timeSlot.fin,
         type: 'sport',
-        color: '#27AE60',
+        color: 'var(--green)',
       }]);
     }
     setStep(null);

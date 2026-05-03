@@ -7,13 +7,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: '#FAFAFA',
+        bg: 'var(--bg)',
+        surface: 'var(--surface)',
+        ink: 'var(--ink)',
+        'ink-2': 'var(--ink-2)',
+        'ink-3': 'var(--ink-3)',
+        line: 'var(--line)',
+        'line-2': 'var(--line-2)',
+        red: 'var(--red)',
+        'red-soft': 'var(--red-soft)',
+        'red-50': 'var(--red-50)',
+        cyan: 'var(--cyan)',
+        'cyan-soft': 'var(--cyan-soft)',
+        orange: 'var(--orange)',
+        'orange-soft': 'var(--orange-soft)',
+        green: 'var(--green)',
+        'green-soft': 'var(--green-soft)',
+        /* Legacy aliases kept for backward compat */
         'red-kick': '#C0392B',
-        'red-light': '#E74C3C',
-        'cyan-fight': '#00b4d8',
+        'cyan-fight': '#00B4D8',
         'orange-marque': '#E67E22',
-        'text-primary': '#1a1a1a',
-        'text-secondary': '#666666',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -22,7 +35,10 @@ export default {
         card: '12px',
       },
       boxShadow: {
-        card: '0 1px 6px rgba(0,0,0,0.08)',
+        card: 'var(--shadow-card)',
+        lift: 'var(--shadow-lift)',
+        fab: 'var(--shadow-fab)',
+        /* Legacy */
         'card-hover': '0 4px 16px rgba(0,0,0,0.12)',
       },
     },

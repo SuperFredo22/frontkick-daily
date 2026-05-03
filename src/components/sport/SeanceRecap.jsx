@@ -32,7 +32,7 @@ export default function SeanceRecap({ open, seance, data, onSave, onClose }) {
         <button
           onClick={handleSave}
           className="w-full py-2.5 rounded-lg text-white font-medium text-sm"
-          style={{ background: '#27AE60' }}
+          style={{ background: 'var(--green)' }}
         >
           Enregistrer
         </button>
@@ -79,7 +79,7 @@ export default function SeanceRecap({ open, seance, data, onSave, onClose }) {
           >
             <span className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs font-bold transition-colors ${
               addAgenda ? 'text-white border-green-500' : 'border-gray-300'
-            }`} style={addAgenda ? { background: '#27AE60' } : {}}>
+            }`} style={addAgenda ? { background: 'var(--green)' } : {}}>
               {addAgenda ? '✓' : ''}
             </span>
             Ajouter à l'agenda

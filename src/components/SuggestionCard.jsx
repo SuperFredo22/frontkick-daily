@@ -3,9 +3,9 @@ import Card from './Card';
 import Modal from './Modal';
 
 const BANQUE_CONFIG = {
-  tiktok:     { label: 'TikTok',     color: '#C0392B', bg: '#FEF2F2', emoji: '🎬' },
-  fightfocus: { label: 'FightFocus', color: '#00b4d8', bg: '#E0F7FA', emoji: '🌐' },
-  marque:     { label: 'Marque',     color: '#E67E22', bg: '#FFF3E0', emoji: '👕' },
+  tiktok:     { label: 'TikTok',     color: 'var(--red)',    bg: 'var(--red-50)',      emoji: '🎬' },
+  fightfocus: { label: 'FightFocus', color: 'var(--cyan)',   bg: 'var(--cyan-soft)',   emoji: '🌐' },
+  marque:     { label: 'Marque',     color: 'var(--orange)', bg: 'var(--orange-soft)', emoji: '👕' },
 };
 
 function getLabel(banque, item, config) {

@@ -170,7 +170,7 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
         <button
           onClick={handleTerminer}
           className="w-full py-4 rounded-2xl font-bold text-white text-base active:opacity-90"
-          style={{ background: '#27AE60' }}
+          style={{ background: 'var(--green)' }}
         >
           💪 Terminer la séance
         </button>
