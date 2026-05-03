@@ -7,10 +7,11 @@ export function useStorage(key, defaultValue) {
     try {
       const stored = localStorage.getItem(prefixedKey);
       if (stored !== null) return JSON.parse(stored);
-      return typeof defaultValue === 'function' ? defaultValue() : defaultValue;
     } catch {
-      return typeof defaultValue === 'function' ? defaultValue() : defaultValue;
+      // JSON parse failed — don't overwrite stored data, just use default in memory
+      console.warn(`[useStorage] Could not parse stored value for key "${prefixedKey}", using default`);
     }
+    return typeof defaultValue === 'function' ? defaultValue() : defaultValue;
   });
 
   useEffect(() => {

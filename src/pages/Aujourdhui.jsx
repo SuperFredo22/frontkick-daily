@@ -20,6 +20,36 @@ function makeItemLabel(banque, item) {
 const BANQUE_EMOJI = { tiktok: '🎬', fightfocus: '🌐', marque: '👕' };
 const BANQUE_COLOR = { tiktok: 'var(--red)', fightfocus: 'var(--cyan)', marque: 'var(--orange)' };
 
+// Long-press hook: fires callback after `delay` ms, returns {onPointerDown, onPointerUp, onPointerLeave, onClick}
+function useLongPress(onLongPress, onShortPress, delay = 500) {
+  const timer = useRef(null);
+  const fired = useRef(false);
+
+  const start = () => {
+    fired.current = false;
+    timer.current = setTimeout(() => {
+      fired.current = true;
+      onLongPress?.();
+    }, delay);
+  };
+
+  const cancel = () => {
+    clearTimeout(timer.current);
+  };
+
+  const handleClick = () => {
+    if (!fired.current) onShortPress?.();
+    fired.current = false;
+  };
+
+  return {
+    onPointerDown: start,
+    onPointerUp: cancel,
+    onPointerLeave: cancel,
+    onClick: handleClick,
+  };
+}
+
 export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
   const [viewDate, setViewDate] = useState(today());
   const isYesterday = formatDate(viewDate) !== formatDate(today());
@@ -35,8 +65,12 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
   const [heroFading, setHeroFading] = useState(false);
   const [showSportSheet, setShowSportSheet] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
-  const [prieresPressTimer, setPrieresPressTimer] = useState(null);
-  const [cigasPressTimer, setCigasPressTimer] = useState(null);
+
+  // Édition habitudes
+  const [showPrieresEdit, setShowPrieresEdit] = useState(false);
+  const [showCigsEdit, setShowCigsEdit] = useState(false);
+  const [editPrieres, setEditPrieres] = useState(0);
+  const [editCigs, setEditCigs] = useState(0);
 
   const skipped = reporte || [];
 
@@ -218,6 +252,18 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
     }));
   };
 
+  // ─── Long press sur prières & cigarettes ─────────────────────────────────
+
+  const prieresLongPress = useLongPress(
+    () => { setEditPrieres(hab.prieres || 0); setShowPrieresEdit(true); },
+    () => updateHabitude('prieres', (hab.prieres || 0) + 1),
+  );
+
+  const cigsLongPress = useLongPress(
+    () => { setEditCigs(hab.cigarettes || 0); setShowCigsEdit(true); },
+    () => updateHabitude('cigarettes', (hab.cigarettes || 0) + 1),
+  );
+
   const noSportDays = getConsecutiveNoSportDays();
   const hab = journal?.habitudes || { prieres: 0, sport: false, cigarettes: 0, note: '' };
   const tachesFaites    = (journal?.taches || []).filter(t => t.statut === 'fait');
@@ -303,7 +349,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
         className="flex gap-2 px-5 mt-4 pb-1"
         style={{ overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
       >
-        {/* Prières */}
+        {/* Prières — tap = +1, long press = éditer */}
         <button
           className="flex items-center gap-1.5 shrink-0 btn-press"
           style={{
@@ -312,8 +358,10 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
             borderRadius: 14, padding: '8px 12px',
             color: (hab.prieres || 0) > 0 ? 'var(--red)' : 'var(--ink-2)',
             fontSize: 13, fontWeight: 500,
+            userSelect: 'none', WebkitUserSelect: 'none',
           }}
-          onClick={() => updateHabitude('prieres', (hab.prieres || 0) + 1)}
+          {...prieresLongPress}
+          title="Tap = +1 · Maintenir = éditer"
         >
           <span>🙏</span>
           <span>{hab.prieres || 0}</span>
@@ -335,7 +383,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
           <span>{sportDone ? `✓ ${sportLabel || 'Fait'}` : 'Sport'}</span>
         </button>
 
-        {/* Cigarettes */}
+        {/* Cigarettes — tap = +1, long press = éditer */}
         <button
           className="flex items-center gap-1.5 shrink-0 btn-press"
           style={{
@@ -344,8 +392,10 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
             borderRadius: 14, padding: '8px 12px',
             color: (hab.cigarettes || 0) === 0 ? 'var(--green)' : 'var(--orange)',
             fontSize: 13, fontWeight: 500,
+            userSelect: 'none', WebkitUserSelect: 'none',
           }}
-          onClick={() => updateHabitude('cigarettes', (hab.cigarettes || 0) + 1)}
+          {...cigsLongPress}
+          title="Tap = +1 · Maintenir = éditer"
         >
           <span>🚬</span>
           <span>{hab.cigarettes || 0}</span>
@@ -405,35 +455,19 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
           <div className="flex items-center justify-between mb-3">
             <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>Suite</p>
           </div>
-          <div className="flex flex-col gap-2">
-            {queue.map((s, i) => {
-              const cfg = getSuggConfig(s) || { color: BANQUE_COLOR[s.banque], emoji: BANQUE_EMOJI[s.banque], label: s.banque };
-              const label = s.banque === 'projet' ? s.item.description
-                : s.banque === 'tiktok' ? s.item.titre
-                : s.item.code ? `${s.item.code} — ${s.item.description}` : s.item.description;
-              return (
-                <div
-                  key={i}
-                  className="flex items-center gap-3"
-                  style={{
-                    background: 'var(--surface)',
-                    borderRadius: 12,
-                    padding: '10px 12px',
-                    boxShadow: 'var(--shadow-card)',
-                    borderLeft: `3px solid ${cfg.color}`,
-                  }}
-                >
-                  <span style={{ fontSize: 14 }}>{cfg.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold uppercase" style={{ color: cfg.color, letterSpacing: '0.06em' }}>
-                      {cfg.label || s.banque}
-                    </p>
-                    <p className="text-[13px] font-medium truncate" style={{ color: 'var(--ink-2)' }}>{label}</p>
-                  </div>
-                  <ChevronRight size={16} strokeWidth={2} color="var(--ink-3)" />
-                </div>
-              );
-            })}
+          <div className="flex flex-col gap-3">
+            {queue.map((s, i) => (
+              <SuggestionCard
+                key={i}
+                banque={s.banque}
+                item={s.item}
+                config={getSuggConfig(s)}
+                onFait={(_, timeSlot) => handleSuggestionFait(s, timeSlot)}
+                onReporte={() => handleSuggestionReporte(s)}
+                onAutre={(_, texte) => handleSuggestionAutre(s, texte)}
+                onSuivante={() => handleSuggestionSuivante(s)}
+              />
+            ))}
           </div>
         </section>
       )}
@@ -444,28 +478,44 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
           <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>
             J'ai aussi fait
           </p>
-          <button
-            onClick={() => setShowBonusInput(true)}
-            className="w-7 h-7 rounded-full text-white text-lg font-bold flex items-center justify-center btn-press"
-            style={{ background: 'var(--red)', fontSize: 18, lineHeight: 1 }}
-          >
-            +
-          </button>
+          {!showBonusInput && (
+            <button
+              onClick={() => setShowBonusInput(true)}
+              className="w-7 h-7 rounded-full text-white text-lg font-bold flex items-center justify-center btn-press"
+              style={{ background: 'var(--red)', fontSize: 18, lineHeight: 1 }}
+            >
+              +
+            </button>
+          )}
         </div>
 
         {showBonusInput && (
-          <div className="flex gap-2 mb-2">
+          <div className="mb-3" style={{ background: 'var(--surface)', borderRadius: 14, padding: '10px 12px', boxShadow: 'var(--shadow-card)' }}>
             <input
               autoFocus value={bonusInput}
               onChange={e => setBonusInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') addBonus(); if (e.key === 'Escape') setShowBonusInput(false); }}
+              onKeyDown={e => { if (e.key === 'Enter') addBonus(); if (e.key === 'Escape') { setShowBonusInput(false); setBonusInput(''); } }}
               placeholder="Ce que tu as accompli..."
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full text-sm mb-2"
+              style={{ border: 'none', outline: 'none', background: 'transparent', color: 'var(--ink)', fontSize: 14 }}
             />
-            <button onClick={addBonus} className="px-3 py-2 rounded-lg text-white text-sm font-medium btn-press"
-              style={{ background: 'var(--red)' }}>
-              OK
-            </button>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setShowBonusInput(false); setBonusInput(''); }}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium btn-press"
+                style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={addBonus}
+                disabled={!bonusInput.trim()}
+                className="px-3 py-1.5 rounded-lg text-white text-sm font-medium btn-press disabled:opacity-40"
+                style={{ background: 'var(--red)' }}
+              >
+                Ajouter
+              </button>
+            </div>
           </div>
         )}
 
@@ -593,6 +643,96 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
           rows={5}
         />
+      </Modal>
+
+      {/* ── Modal édition prières ──────────────────────────────────────── */}
+      <Modal
+        open={showPrieresEdit}
+        onClose={() => setShowPrieresEdit(false)}
+        title="🙏 Prières"
+        footer={
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={() => { updateHabitude('prieres', 0); setShowPrieresEdit(false); }}
+              className="flex-1 py-2.5 rounded-lg font-medium text-sm btn-press"
+              style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}
+            >
+              Réinitialiser
+            </button>
+            <button
+              onClick={() => { updateHabitude('prieres', editPrieres); setShowPrieresEdit(false); }}
+              className="flex-1 py-2.5 rounded-lg font-medium text-sm btn-press"
+              style={{ background: 'var(--red)', color: 'white' }}
+            >
+              Enregistrer
+            </button>
+          </div>
+        }
+      >
+        <div className="flex items-center justify-center gap-6 py-2">
+          <button
+            onClick={() => setEditPrieres(v => Math.max(0, v - 1))}
+            className="w-12 h-12 rounded-full text-2xl font-bold btn-press flex items-center justify-center"
+            style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}
+          >
+            −
+          </button>
+          <span style={{ fontSize: 40, fontWeight: 800, color: 'var(--ink)', minWidth: 60, textAlign: 'center' }}>
+            {editPrieres}
+          </span>
+          <button
+            onClick={() => setEditPrieres(v => v + 1)}
+            className="w-12 h-12 rounded-full text-2xl font-bold btn-press flex items-center justify-center"
+            style={{ background: 'var(--red)', color: 'white' }}
+          >
+            +
+          </button>
+        </div>
+      </Modal>
+
+      {/* ── Modal édition cigarettes ───────────────────────────────────── */}
+      <Modal
+        open={showCigsEdit}
+        onClose={() => setShowCigsEdit(false)}
+        title="🚬 Cigarettes"
+        footer={
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={() => { updateHabitude('cigarettes', 0); setShowCigsEdit(false); }}
+              className="flex-1 py-2.5 rounded-lg font-medium text-sm btn-press"
+              style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}
+            >
+              Réinitialiser
+            </button>
+            <button
+              onClick={() => { updateHabitude('cigarettes', editCigs); setShowCigsEdit(false); }}
+              className="flex-1 py-2.5 rounded-lg font-medium text-sm btn-press"
+              style={{ background: 'var(--orange)', color: 'white' }}
+            >
+              Enregistrer
+            </button>
+          </div>
+        }
+      >
+        <div className="flex items-center justify-center gap-6 py-2">
+          <button
+            onClick={() => setEditCigs(v => Math.max(0, v - 1))}
+            className="w-12 h-12 rounded-full text-2xl font-bold btn-press flex items-center justify-center"
+            style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}
+          >
+            −
+          </button>
+          <span style={{ fontSize: 40, fontWeight: 800, color: 'var(--ink)', minWidth: 60, textAlign: 'center' }}>
+            {editCigs}
+          </span>
+          <button
+            onClick={() => setEditCigs(v => v + 1)}
+            className="w-12 h-12 rounded-full text-2xl font-bold btn-press flex items-center justify-center"
+            style={{ background: 'var(--orange)', color: 'white' }}
+          >
+            +
+          </button>
+        </div>
       </Modal>
     </div>
   );

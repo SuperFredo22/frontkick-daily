@@ -5,10 +5,16 @@ import Aujourdhui from './pages/Aujourdhui';
 import Agenda from './pages/Agenda';
 import Stats from './pages/Stats';
 import Banques from './pages/Banques';
+import PinLock, { isUnlocked } from './components/PinLock';
 
 export default function App() {
+  const [unlocked, setUnlocked] = useState(() => isUnlocked());
   const [page, setPage] = useState('today');
   const [pendingCompose, setPendingCompose] = useState(null);
+
+  if (!unlocked) {
+    return <PinLock onUnlocked={() => setUnlocked(true)} />;
+  }
 
   const handleCompose = (action) => {
     if (['tiktok', 'fightfocus', 'marque', 'projets'].includes(action)) {

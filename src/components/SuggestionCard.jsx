@@ -141,7 +141,7 @@ export default function SuggestionCard({
       <>
         <div
           style={{
-            background: 'linear-gradient(165deg, #fff 0%, var(--red-50) 100%)',
+            background: `linear-gradient(165deg, #fff 0%, ${config.bg} 100%)`,
             borderRadius: 22,
             padding: 20,
             boxShadow: 'var(--shadow-lift)',
@@ -155,7 +155,7 @@ export default function SuggestionCard({
             <div className="flex items-center gap-2.5">
               <span
                 className="flex items-center justify-center text-xl shrink-0"
-                style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--red-soft)' }}
+                style={{ width: 32, height: 32, borderRadius: 10, background: config.bg }}
               >
                 {config.emoji}
               </span>
@@ -171,7 +171,7 @@ export default function SuggestionCard({
             {badge && (
               <span
                 className="text-[10px] font-bold px-2 py-1 rounded-full"
-                style={{ background: 'var(--red)', color: 'white', letterSpacing: '0.02em' }}
+                style={{ background: config.color, color: 'white', letterSpacing: '0.02em' }}
               >
                 {badge}
               </span>
@@ -193,11 +193,10 @@ export default function SuggestionCard({
             style={{
               padding: '15px',
               borderRadius: 14,
-              background: 'var(--red)',
+              background: config.color,
               color: 'white',
               fontSize: 15,
               fontWeight: 600,
-              boxShadow: '0 4px 12px -2px rgba(192,57,43,.35)',
               marginBottom: 10,
             }}
           >
