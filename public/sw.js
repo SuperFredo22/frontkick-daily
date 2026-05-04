@@ -21,6 +21,32 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// ── Push notifications ────────────────────────────────────────────────────────
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  const { title, body } = event.data.json();
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/icons/icon.svg',
+      badge: '/icons/icon.svg',
+      vibrate: [200, 100, 200, 100, 200],
+      requireInteraction: false,
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const existing = list.find(c => c.url.includes(self.location.origin));
+      if (existing) return existing.focus();
+      return clients.openWindow('/');
+    })
+  );
+});
+
 // ── Fetch strategy ────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;

@@ -1,0 +1,62 @@
+name: Push Notifications
+
+on:
+  # Horaires en UTC — Paris est UTC+2 en été (mai à oct), UTC+1 en hiver
+  # Ces horaires sont configurés pour l'heure d'été (UTC+2)
+  schedule:
+    - cron: '30 5 * * *'   # 07h30 Paris — Prières du matin
+    - cron: '0 7 * * *'    # 09h00 Paris — Première tâche
+    - cron: '0 10 * * *'   # 12h00 Paris — Bilan midi
+    - cron: '0 12 * * *'   # 14h00 Paris — Focus après-midi
+    - cron: '0 14 * * *'   # 16h00 Paris — Sport
+    - cron: '30 15 * * *'  # 17h30 Paris — Dernière heure productive
+    - cron: '0 17 * * *'   # 19h00 Paris — Contenu & FightFocus
+    - cron: '30 18 * * *'  # 20h30 Paris — Prières du soir
+    - cron: '30 19 * * *'  # 21h30 Paris — Journal
+  workflow_dispatch:
+    inputs:
+      type:
+        description: 'Type de notification à envoyer manuellement'
+        required: true
+        default: 'morning-prayer'
+        type: choice
+        options:
+          - morning-prayer
+          - first-task
+          - midday
+          - afternoon
+          - sport
+          - last-hour
+          - content
+          - evening-prayer
+          - journal
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déterminer le type de notification
+        id: notif
+        run: |
+          HOUR=$(date -u +%H)
+          MINUTE=$(date -u +%M)
+
+          if   [ "$HOUR" = "05" ] && [ "$MINUTE" = "30" ]; then TYPE="morning-prayer"
+          elif [ "$HOUR" = "07" ] && [ "$MINUTE" = "00" ]; then TYPE="first-task"
+          elif [ "$HOUR" = "10" ] && [ "$MINUTE" = "00" ]; then TYPE="midday"
+          elif [ "$HOUR" = "12" ] && [ "$MINUTE" = "00" ]; then TYPE="afternoon"
+          elif [ "$HOUR" = "14" ] && [ "$MINUTE" = "00" ]; then TYPE="sport"
+          elif [ "$HOUR" = "15" ] && [ "$MINUTE" = "30" ]; then TYPE="last-hour"
+          elif [ "$HOUR" = "17" ] && [ "$MINUTE" = "00" ]; then TYPE="content"
+          elif [ "$HOUR" = "18" ] && [ "$MINUTE" = "30" ]; then TYPE="evening-prayer"
+          elif [ "$HOUR" = "19" ] && [ "$MINUTE" = "30" ]; then TYPE="journal"
+          else TYPE="${{ github.event.inputs.type }}"
+          fi
+
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+
+      - name: Envoyer la notification
+        run: |
+          curl -s -f -X GET \
+            "https://frontkick-daily.vercel.app/api/cron?t=${{ steps.notif.outputs.type }}" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"

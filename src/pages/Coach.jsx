@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { Bot, Send, Key, AlertTriangle, Info, Lightbulb, ShieldAlert, RefreshCw } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Bot, Send, Key, AlertTriangle, Info, Lightbulb, ShieldAlert, RefreshCw, Bell, BellOff } from 'lucide-react';
 import { analyzeData, buildSystemPrompt } from '../utils/dataAnalyst';
 import { callGemini } from '../utils/gemini';
+import { getNotificationStatus, subscribeToNotifications, unsubscribeFromNotifications } from '../utils/notifications';
 
 const API_KEY_STORAGE = 'fk_gemini_key';
 
@@ -120,6 +121,95 @@ function SetupCard({ onSave }) {
   );
 }
 
+const NOTIF_STATUS_LABELS = {
+  'unsupported':          { label: 'Non supporté sur cet appareil',      color: 'var(--ink-3)' },
+  'denied':               { label: 'Bloqué dans les réglages iPhone',     color: 'var(--red)'   },
+  'default':              { label: 'Non activé',                          color: 'var(--ink-3)' },
+  'granted-not-subscribed': { label: 'Permission accordée, non inscrit', color: '#D97706'       },
+  'subscribed':           { label: '✓ Actif — 9 rappels par jour',        color: '#16A34A'      },
+};
+
+function NotifCard() {
+  const [status, setStatus]   = useState('default');
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+
+  useEffect(() => {
+    getNotificationStatus().then(setStatus).catch(() => setStatus('unsupported'));
+  }, []);
+
+  const isSubscribed  = status === 'subscribed';
+  const isUnsupported = status === 'unsupported';
+  const isDenied      = status === 'denied';
+
+  const handleToggle = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      if (isSubscribed) {
+        await unsubscribeFromNotifications();
+        setStatus('default');
+      } else {
+        await subscribeToNotifications();
+        setStatus('subscribed');
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const info = NOTIF_STATUS_LABELS[status] || NOTIF_STATUS_LABELS['default'];
+
+  return (
+    <div className="rounded-2xl p-4 mx-4" style={{ background: 'var(--line-2)' }}>
+      <div className="flex items-center gap-2 mb-1">
+        <Bell size={15} style={{ color: isSubscribed ? '#16A34A' : 'var(--ink-3)' }} />
+        <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Notifications push</p>
+      </div>
+      <p className="text-xs mb-1" style={{ color: info.color, fontWeight: 600 }}>{info.label}</p>
+      {!isSubscribed && !isUnsupported && !isDenied && (
+        <p className="text-xs mb-3 leading-relaxed" style={{ color: 'var(--ink-3)' }}>
+          Reçois jusqu'à 9 rappels personnalisés par jour directement sur ton iPhone — prières, sport, tâches, journal.{' '}
+          <span style={{ color: 'var(--red)', fontWeight: 600 }}>App installée requise</span>{' '}
+          (Ajouter à l'écran d'accueil) + iOS 16.4+.
+        </p>
+      )}
+      {isDenied && (
+        <p className="text-xs mb-3 leading-relaxed" style={{ color: 'var(--ink-3)' }}>
+          Autorise les notifications dans <strong>Réglages → Frontkick Daily → Notifications</strong>.
+        </p>
+      )}
+      {isUnsupported && (
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--ink-3)' }}>
+          Installe l'app (Ajouter à l'écran d'accueil depuis Safari) et assure-toi d'être sur iOS 16.4+.
+        </p>
+      )}
+      {error && <p className="text-xs mb-2" style={{ color: 'var(--red)' }}>{error}</p>}
+      {!isUnsupported && !isDenied && (
+        <button
+          onClick={handleToggle}
+          disabled={loading}
+          className="w-full py-2.5 rounded-xl font-semibold text-sm btn-press"
+          style={{
+            background: isSubscribed ? 'transparent' : 'var(--red)',
+            color: isSubscribed ? 'var(--ink-3)' : '#fff',
+            border: isSubscribed ? '1px solid var(--line)' : 'none',
+            opacity: loading ? 0.5 : 1,
+          }}
+        >
+          {loading ? '…' : isSubscribed ? (
+            <span className="flex items-center justify-center gap-1.5"><BellOff size={13} /> Désactiver les notifications</span>
+          ) : (
+            <span className="flex items-center justify-center gap-1.5"><Bell size={13} /> Activer les notifications</span>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
 const QUICK_PROMPTS = [
   'Comment améliorer ma semaine ?',
   'Analyse mes habitudes tabac',
@@ -214,6 +304,8 @@ export default function Coach() {
           <div className="flex-1 overflow-auto flex flex-col gap-3 pb-3">
 
             <InsightsPanel alerts={analysis?.alerts || []} analysis={analysis} />
+
+            <NotifCard />
 
             {/* Divider */}
             {messages.length > 0 && (
