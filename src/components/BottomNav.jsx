@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sun, Calendar, BarChart3, FolderOpen, Plus } from 'lucide-react';
+import { Sun, Calendar, BarChart3, FolderOpen, Plus, Bot } from 'lucide-react';
 
 const TABS = [
   { id: 'today',   label: "Aujourd'hui", Icon: Sun },
   { id: 'agenda',  label: 'Agenda',       Icon: Calendar },
   { id: 'stats',   label: 'Stats',        Icon: BarChart3 },
+  { id: 'coach',   label: 'Coach',        Icon: Bot },
   { id: 'banques', label: 'Banques',      Icon: FolderOpen },
 ];
 
@@ -61,7 +62,7 @@ export default function BottomNav({ current, onChange, onCompose }) {
   };
 
   const leftTabs = TABS.slice(0, 2);
-  const rightTabs = TABS.slice(2);
+  const rightTabs = TABS.slice(2); // Stats, Coach, Banques
 
   return (
     <>
