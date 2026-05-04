@@ -78,7 +78,7 @@ function useLongPress(onLongPress, onShortPress, delay = 500) {
   };
 }
 
-export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
+export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSettings }) {
   const [viewDate, setViewDate] = useState(today());
   const isYesterday = formatDate(viewDate) !== formatDate(today());
 
@@ -357,6 +357,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed }) {
             </button>
           )}
           <button
+            onClick={onOpenSettings}
             className="flex items-center justify-center btn-press"
             style={{ width: 38, height: 38, borderRadius: 12, background: 'var(--surface)', boxShadow: 'var(--shadow-card)' }}
           >
