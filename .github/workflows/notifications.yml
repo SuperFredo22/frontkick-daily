@@ -2,7 +2,6 @@ name: Push Notifications
 
 on:
   # Horaires en UTC — Paris est UTC+2 en été (mai à oct), UTC+1 en hiver
-  # Ces horaires sont configurés pour l'heure d'été (UTC+2)
   schedule:
     - cron: '30 5 * * *'   # 07h30 Paris — Prières du matin
     - cron: '0 7 * * *'    # 09h00 Paris — Première tâche
@@ -38,24 +37,38 @@ jobs:
       - name: Déterminer le type de notification
         id: notif
         run: |
-          HOUR=$(date -u +%H)
-          MINUTE=$(date -u +%M)
+          # Déclenchement manuel → type direct
+          if [ -n "${{ github.event.inputs.type }}" ]; then
+            echo "type=${{ github.event.inputs.type }}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-          if   [ "$HOUR" = "05" ] && [ "$MINUTE" = "30" ]; then TYPE="morning-prayer"
-          elif [ "$HOUR" = "07" ] && [ "$MINUTE" = "00" ]; then TYPE="first-task"
-          elif [ "$HOUR" = "10" ] && [ "$MINUTE" = "00" ]; then TYPE="midday"
-          elif [ "$HOUR" = "12" ] && [ "$MINUTE" = "00" ]; then TYPE="afternoon"
-          elif [ "$HOUR" = "14" ] && [ "$MINUTE" = "00" ]; then TYPE="sport"
-          elif [ "$HOUR" = "15" ] && [ "$MINUTE" = "30" ]; then TYPE="last-hour"
-          elif [ "$HOUR" = "17" ] && [ "$MINUTE" = "00" ]; then TYPE="content"
-          elif [ "$HOUR" = "18" ] && [ "$MINUTE" = "30" ]; then TYPE="evening-prayer"
-          elif [ "$HOUR" = "19" ] && [ "$MINUTE" = "30" ]; then TYPE="journal"
-          else TYPE="${{ github.event.inputs.type }}"
+          # Déclenchement cron → fenêtre ±15 min autour de chaque horaire
+          # (GitHub Actions peut être en retard jusqu'à ~15 min)
+          TOTAL=$(( $(date -u +%H) * 60 + $(date -u +%M) ))
+          TYPE=""
+
+          if   [ "$TOTAL" -ge 315 ] && [ "$TOTAL" -le 345 ]; then TYPE="morning-prayer"   # 05:30 UTC
+          elif [ "$TOTAL" -ge 405 ] && [ "$TOTAL" -le 435 ]; then TYPE="first-task"        # 07:00 UTC
+          elif [ "$TOTAL" -ge 585 ] && [ "$TOTAL" -le 615 ]; then TYPE="midday"            # 10:00 UTC
+          elif [ "$TOTAL" -ge 705 ] && [ "$TOTAL" -le 735 ]; then TYPE="afternoon"         # 12:00 UTC
+          elif [ "$TOTAL" -ge 825 ] && [ "$TOTAL" -le 855 ]; then TYPE="sport"             # 14:00 UTC
+          elif [ "$TOTAL" -ge 915 ] && [ "$TOTAL" -le 945 ]; then TYPE="last-hour"         # 15:30 UTC
+          elif [ "$TOTAL" -ge 1005 ] && [ "$TOTAL" -le 1035 ]; then TYPE="content"         # 17:00 UTC
+          elif [ "$TOTAL" -ge 1095 ] && [ "$TOTAL" -le 1125 ]; then TYPE="evening-prayer"  # 18:30 UTC
+          elif [ "$TOTAL" -ge 1155 ] && [ "$TOTAL" -le 1185 ]; then TYPE="journal"         # 19:30 UTC
           fi
 
           echo "type=$TYPE" >> $GITHUB_OUTPUT
 
+          if [ -z "$TYPE" ]; then
+            echo "Aucun type pour $(date -u +%H:%M) UTC (TOTAL=$TOTAL) — skipped"
+          else
+            echo "Type détecté : $TYPE"
+          fi
+
       - name: Envoyer la notification
+        if: steps.notif.outputs.type != ''
         run: |
           curl -s -f -X GET \
             "https://frontkick-daily.vercel.app/api/cron?t=${{ steps.notif.outputs.type }}" \
