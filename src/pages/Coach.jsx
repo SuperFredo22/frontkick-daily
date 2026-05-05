@@ -4,7 +4,7 @@ import { analyzeData, buildSystemPrompt } from '../utils/dataAnalyst';
 import { callGemini } from '../utils/gemini';
 import { getNotificationStatus, subscribeToNotifications, unsubscribeFromNotifications } from '../utils/notifications';
 
-const API_KEY_STORAGE = 'fk_gemini_key';
+const API_KEY_STORAGE = 'fk_perplexity_key';
 
 function AlertBadge({ level }) {
   const map = {
@@ -89,8 +89,8 @@ function SetupCard({ onSave }) {
           <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Clé API Gemini</p>
         </div>
         <p className="text-xs leading-relaxed mb-3" style={{ color: 'var(--ink-3)' }}>
-          Le coach IA utilise Gemini 2.0 Flash Lite (gratuit — quota généreux).
-          Génère ta clé sur <span style={{ color: 'var(--red)', fontWeight: 600 }}>aistudio.google.com</span>,
+          Le coach IA utilise Perplexity Sonar (~$1 / million de tokens).
+          Génère ta clé sur <span style={{ color: 'var(--red)', fontWeight: 600 }}>perplexity.ai/settings/api</span>,
           puis colle-la ici.
         </p>
         <input
@@ -230,8 +230,8 @@ export default function Coach() {
 
 
   const geminiHistory = messages.map(m => ({
-    role: m.role === 'user' ? 'user' : 'model',
-    parts: [{ text: m.text }],
+    role: m.role === 'user' ? 'user' : 'assistant',
+    content: m.text,
   }));
 
   async function sendMessage(text, silent = false) {

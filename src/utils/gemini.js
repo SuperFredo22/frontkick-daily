@@ -1,22 +1,8 @@
-const MODEL = 'gemini-2.0-flash-lite';
-const BASE   = 'https://generativelanguage.googleapis.com/v1beta/models';
-
 export async function callGemini(apiKey, systemPrompt, history, userMessage) {
-  const url = `${BASE}/${MODEL}:generateContent?key=${apiKey}`;
-
-  const body = {
-    system_instruction: { parts: [{ text: systemPrompt }] },
-    contents: [
-      ...history,
-      { role: 'user', parts: [{ text: userMessage }] },
-    ],
-    generationConfig: { maxOutputTokens: 500, temperature: 0.7 },
-  };
-
-  const res = await fetch(url, {
+  const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ apiKey, systemPrompt, history, userMessage }),
   });
 
   if (!res.ok) {
@@ -25,5 +11,5 @@ export async function callGemini(apiKey, systemPrompt, history, userMessage) {
   }
 
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? 'Pas de réponse.';
+  return data.choices?.[0]?.message?.content ?? 'Pas de réponse.';
 }
