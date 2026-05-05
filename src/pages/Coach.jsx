@@ -89,7 +89,7 @@ function SetupCard({ onSave }) {
           <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Clé API Gemini</p>
         </div>
         <p className="text-xs leading-relaxed mb-3" style={{ color: 'var(--ink-3)' }}>
-          Le coach IA utilise Gemini 1.5 Flash (gratuit — 1 500 req/jour).
+          Le coach IA utilise Gemini 2.0 Flash Lite (gratuit — quota généreux).
           Génère ta clé sur <span style={{ color: 'var(--red)', fontWeight: 600 }}>aistudio.google.com</span>,
           puis colle-la ici.
         </p>
@@ -210,12 +210,6 @@ function NotifCard() {
   );
 }
 
-const QUICK_PROMPTS = [
-  'Comment améliorer ma semaine ?',
-  'Analyse mes habitudes tabac',
-  'Propose-moi un objectif sport',
-];
-
 export default function Coach() {
   const [apiKey, setApiKey]     = useState(() => localStorage.getItem(API_KEY_STORAGE) || '');
   const [messages, setMessages] = useState([]);
@@ -234,12 +228,6 @@ export default function Coach() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Send welcome message once API key is set and no messages yet
-  useEffect(() => {
-    if (!apiKey || messages.length > 0 || !analysis) return;
-    sendMessage('Bonjour ! Fais-moi un bilan rapide de ma situation actuelle et donne-moi 1 priorité concrète pour aujourd\'hui.', true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKey]);
 
   const geminiHistory = messages.map(m => ({
     role: m.role === 'user' ? 'user' : 'model',
@@ -331,19 +319,16 @@ export default function Coach() {
               )}
             </div>
 
-            {/* Quick prompts (only when no messages yet or after loading) */}
+            {/* Bilan du jour — bouton principal */}
             {messages.length === 0 && !loading && (
-              <div className="flex flex-col gap-1.5 px-4">
-                {QUICK_PROMPTS.map(q => (
-                  <button
-                    key={q}
-                    onClick={() => sendMessage(q)}
-                    className="text-left rounded-xl px-3 py-2.5 text-sm btn-press"
-                    style={{ background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--ink-2)' }}
-                  >
-                    {q}
-                  </button>
-                ))}
+              <div className="px-4">
+                <button
+                  onClick={() => sendMessage('Bonjour ! Fais-moi un bilan rapide de ma situation actuelle et donne-moi 1 priorité concrète pour aujourd\'hui.')}
+                  className="w-full py-4 rounded-2xl font-bold text-base text-white btn-press"
+                  style={{ background: 'var(--red)', letterSpacing: '0.01em' }}
+                >
+                  Démarre mon bilan du jour
+                </button>
               </div>
             )}
 

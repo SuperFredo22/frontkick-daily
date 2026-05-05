@@ -1,4 +1,4 @@
-const MODEL = 'gemini-2.0-flash';
+const MODEL = 'gemini-2.0-flash-lite';
 const BASE   = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export async function callGemini(apiKey, systemPrompt, history, userMessage) {
