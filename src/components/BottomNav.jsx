@@ -5,7 +5,7 @@ const TABS = [
   { id: 'today',   label: "Aujourd'hui", Icon: Sun },
   { id: 'agenda',  label: 'Agenda',       Icon: Calendar },
   { id: 'stats',   label: 'Stats',        Icon: BarChart3 },
-  { id: 'coach',   label: 'Coach',        Icon: Bot },
+  { id: 'compose', label: 'Ajouter',      Icon: Plus },
   { id: 'banques', label: 'Banques',      Icon: FolderOpen },
 ];
 
@@ -144,14 +144,17 @@ export default function BottomNav({ current, onChange, onCompose }) {
           {rightTabs.map(({ id, label, Icon }) => (
             <TabItem
               key={id} id={id} label={label} Icon={Icon}
-              active={current === id}
-              onClick={() => { setMenuOpen(false); onChange(id); }}
+              active={id === 'compose' ? menuOpen : current === id}
+              onClick={id === 'compose'
+                ? () => setMenuOpen(o => !o)
+                : () => { setMenuOpen(false); onChange(id); }
+              }
             />
           ))}
 
-          {/* FAB */}
+          {/* FAB — Coach */}
           <button
-            onClick={() => setMenuOpen(o => !o)}
+            onClick={() => { setMenuOpen(false); onChange('coach'); }}
             className="absolute btn-press"
             style={{
               left: '50%',
@@ -160,7 +163,7 @@ export default function BottomNav({ current, onChange, onCompose }) {
               width: 56,
               height: 56,
               borderRadius: '50%',
-              background: menuOpen ? '#0F172A' : 'var(--red)',
+              background: current === 'coach' ? '#0F172A' : 'var(--red)',
               color: 'white',
               border: '4px solid var(--bg)',
               boxShadow: 'var(--shadow-fab)',
@@ -171,14 +174,7 @@ export default function BottomNav({ current, onChange, onCompose }) {
               zIndex: 1,
             }}
           >
-            <Plus
-              size={26}
-              strokeWidth={2.2}
-              style={{
-                transform: menuOpen ? 'rotate(45deg)' : 'rotate(0deg)',
-                transition: 'transform 200ms ease',
-              }}
-            />
+            <Bot size={24} strokeWidth={2.2} />
           </button>
         </div>
       </nav>
