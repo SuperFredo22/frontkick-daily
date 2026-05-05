@@ -61,5 +61,9 @@ export async function unsubscribeFromNotifications() {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
-  if (sub) await sub.unsubscribe();
+  if (sub) {
+    await sub.unsubscribe();
+    // Supprimer aussi la souscription côté serveur
+    await fetch('/api/subscribe', { method: 'DELETE' }).catch(() => {});
+  }
 }
