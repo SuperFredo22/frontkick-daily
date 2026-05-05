@@ -34,7 +34,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg)' }}>
-      <main className="flex-1 overflow-hidden min-h-0">
+      <main className="flex-1 overflow-hidden min-h-0" style={{ paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
         {page === 'today'   && <div className="h-full overflow-auto"><Aujourdhui pendingCompose={pendingCompose} onPendingConsumed={clearPending} onOpenSettings={() => setShowSettings(true)} /></div>}
         {page === 'agenda'  && <Agenda pendingCompose={pendingCompose} onPendingConsumed={clearPending} />}
         {page === 'stats'   && <div className="h-full overflow-auto"><Stats /></div>}

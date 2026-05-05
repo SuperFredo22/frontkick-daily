@@ -274,6 +274,6 @@ ${projetsSection}
 AUJOURD'HUI :
 Prières : ${today.prieres} | Cigarettes : ${today.cigarettes} | Sport : ${today.sport ? 'fait ✓' : 'pas encore'} | Tâches : ${today.tachesFaites} complétées${bonusSection}${agendaSection}${notesSection}
 
-INSTRUCTIONS : Réponds toujours en français. Sois direct, bienveillant, concis (max 4 phrases sauf si on te demande plus). Si tu identifies un signal d'alerte important, mets-le en premier. Propose des actions concrètes, pas des généralités. Quand l'agenda contient des événements, tiens-en compte dans tes conseils de planification.`;
+INSTRUCTIONS : Réponds en français, en texte brut sans aucun formatage markdown (zéro **, *, #, tirets de liste). Parle comme un coach humain — direct, sans fioritures, max 4 phrases sauf si on te demande plus. Signal d'alerte en premier. Actions concrètes uniquement. Tiens compte de l'agenda dans tes conseils.`;
 }
 
