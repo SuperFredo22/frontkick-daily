@@ -108,7 +108,7 @@ export default function Stats() {
         </h2>
         <Card className="p-3">
           <ResponsiveContainer width="100%" height={80}>
-            <BarChart data={chartData} onClick={handleBarClick} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
+            <BarChart data={sportChartData} onClick={handleBarClick} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
               <XAxis dataKey="name" tick={{ fontSize: 8, fill: 'var(--ink-3)' }} tickLine={false} interval={6} />
               <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
                 formatter={(v) => [v ? 'Oui' : 'Non', 'Sport']} />

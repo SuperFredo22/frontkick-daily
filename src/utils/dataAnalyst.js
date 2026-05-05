@@ -46,7 +46,7 @@ export function analyzeData() {
     sport:        !!(todayJournal?.sport || todayJournal?.habitudes?.sport),
     tachesFaites: (todayJournal?.taches || []).filter(t => t.statut === 'fait').length,
     note:         todayJournal?.habitudes?.note || '',
-    bonus:        (todayJournal?.bonus || []).map(b => b.label || b.text || b).filter(Boolean),
+    bonus:        (todayJournal?.bonus || []).map(b => b.texte || b.label || b.text || '').filter(Boolean),
   };
 
   // ── Habits (30j) ───────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ export function analyzeData() {
     projets.forEach(p => {
       const tasks   = p.taches || [];
       const done    = tasks.filter(t => t.statut === 'fait').length;
-      const pending = tasks.filter(t => t.statut === 'a_faire').map(t => t.titre || t.label || '').filter(Boolean).slice(0, 3);
+      const pending = tasks.filter(t => t.statut === 'a_faire').map(t => t.description || t.titre || t.label || '').filter(Boolean).slice(0, 3);
       projetTotal += tasks.length;
       projetDone  += done;
       if (pending.length) {
