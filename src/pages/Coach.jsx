@@ -6,16 +6,35 @@ import { getNotificationStatus, subscribeToNotifications, unsubscribeFromNotific
 import { formatDate } from '../utils/date';
 
 const API_KEY_STORAGE = 'fk_perplexity_key';
-const TODAY           = formatDate(new Date());
-const SESSION_KEY     = `fk_coach_session_${TODAY}`;
 const BILANS_KEY      = 'fk_coach_bilans';
+
+// Calculées à la demande (et non au chargement du module) : une PWA iOS peut
+// rester en mémoire plusieurs jours, les constantes seraient figées sur la
+// date d'ouverture.
+const todayStr   = () => formatDate(new Date());
+const sessionKey = () => `fk_coach_session_${todayStr()}`;
+
+function cleanOldSessions() {
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    const cutoffStr = `fk_coach_session_${formatDate(cutoff)}`;
+    const toDelete = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith('fk_coach_session_') && k < cutoffStr) toDelete.push(k);
+    }
+    toDelete.forEach(k => localStorage.removeItem(k));
+  } catch {}
+}
 
 function saveBilan(text) {
   try {
+    const today   = todayStr();
     const clean   = text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#{1,3} /g, '').slice(0, 300);
     const bilans  = JSON.parse(localStorage.getItem(BILANS_KEY) || '[]');
-    const others  = bilans.filter(b => b.date !== TODAY);
-    others.unshift({ date: TODAY, resume: clean });
+    const others  = bilans.filter(b => b.date !== today);
+    others.unshift({ date: today, resume: clean });
     localStorage.setItem(BILANS_KEY, JSON.stringify(others.slice(0, 14)));
   } catch {}
 }
@@ -23,7 +42,7 @@ function saveBilan(text) {
 function getBilanContext() {
   try {
     const bilans = JSON.parse(localStorage.getItem(BILANS_KEY) || '[]');
-    const past   = bilans.filter(b => b.date !== TODAY).slice(0, 5);
+    const past   = bilans.filter(b => b.date !== todayStr()).slice(0, 5);
     if (!past.length) return '';
     return '\n\nHISTORIQUE — résumés bilans récents :\n' +
       past.map(b => `${b.date} : ${b.resume}`).join('\n');
@@ -244,7 +263,8 @@ export default function Coach() {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '');
   const [messages, setMessages] = useState(() => {
     try {
-      const saved = localStorage.getItem(SESSION_KEY);
+      cleanOldSessions();
+      const saved = localStorage.getItem(sessionKey());
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
@@ -264,7 +284,7 @@ export default function Coach() {
   // Persist session
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(messages));
+      localStorage.setItem(sessionKey(), JSON.stringify(messages));
     }
   }, [messages]);
 
@@ -319,7 +339,7 @@ export default function Coach() {
             onClick={() => {
               if (window.confirm('Effacer la clé API et réinitialiser le coach ?')) {
                 localStorage.removeItem(API_KEY_STORAGE);
-                localStorage.removeItem(SESSION_KEY);
+                localStorage.removeItem(sessionKey());
                 setApiKey('');
                 setMessages([]);
               }

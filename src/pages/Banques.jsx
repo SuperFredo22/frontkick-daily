@@ -665,10 +665,17 @@ function ProjetsList({ projets, setProjets }) {
 
 // ─── Main Banques page ────────────────────────────────────────────────────────
 
+const PRIORITY_RANK = {
+  HAUTE: 0, MOYENNE: 1, FAIBLE: 2,
+  P1: 0, P2: 1, P3: 2,
+  'Phase 1': 0, 'Phase 2': 1, 'Phase 3': 2,
+};
+
 export default function Banques({ pendingCompose, onPendingConsumed }) {
   const [activeTab, setActiveTab] = useState('tiktok');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showSortModal, setShowSortModal] = useState(false);
   const [tiktok, setTiktok] = useTikTok();
   const [fightfocus, setFightFocus] = useFightFocus();
   const [marque, setMarque] = useMarque();
@@ -687,6 +694,25 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
   const data = { tiktok, fightfocus, marque };
 
   const activeTabConfig = TABS.find(t => t.id === activeTab);
+
+  // Trie les items actifs (à faire / à tourner) ; les faits et déjà réalisés gardent leur ordre
+  const applySort = (mode) => {
+    const setItems = setters[activeTab];
+    if (!setItems) return;
+    const labelOf = (i) => (activeTab === 'tiktok' ? i.titre : i.description) || '';
+    const rankOf  = (i) => PRIORITY_RANK[i.priorite || i.phase] ?? 99;
+    setItems(prev => {
+      const active = prev.filter(i => !['publiee', 'fait', 'deja_fait'].includes(i.statut));
+      const rest   = prev.filter(i => ['publiee', 'fait', 'deja_fait'].includes(i.statut));
+      const sorted = [...active].sort((a, b) =>
+        mode === 'priorite'
+          ? rankOf(a) - rankOf(b) || labelOf(a).localeCompare(labelOf(b), 'fr')
+          : labelOf(a).localeCompare(labelOf(b), 'fr')
+      );
+      return [...sorted, ...rest];
+    });
+    setShowSortModal(false);
+  };
 
   const filterOptions = activeTab === 'tiktok'
     ? [{ id: 'all', label: 'Toutes' }, { id: 'a_tourner', label: 'À tourner' }, { id: 'publiee', label: 'Publiées' }]
@@ -745,6 +771,7 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
             </button>
           ))}
           <button
+            onClick={() => setShowSortModal(true)}
             className="ml-auto flex items-center gap-1 flex-shrink-0 btn-press"
             style={{ fontSize: 12, color: 'var(--ink-3)' }}
           >
@@ -768,6 +795,23 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
           <ProjetsList projets={projets} setProjets={setProjets} />
         )}
       </div>
+
+      {/* Sort modal */}
+      <Modal open={showSortModal} onClose={() => setShowSortModal(false)} title="Trier les items">
+        <div className="flex flex-col gap-1">
+          <button onClick={() => applySort('priorite')}
+            className="w-full text-left py-3 px-3 rounded-xl hover:bg-gray-50 text-sm font-medium text-gray-700 flex items-center gap-3 btn-press">
+            <span>🎯</span> Par {activeTab === 'marque' ? 'phase' : 'priorité'}
+          </button>
+          <button onClick={() => applySort('alpha')}
+            className="w-full text-left py-3 px-3 rounded-xl hover:bg-gray-50 text-sm font-medium text-gray-700 flex items-center gap-3 btn-press">
+            <span>🔤</span> Alphabétique
+          </button>
+          <p className="text-xs text-gray-400 mt-2 px-1">
+            Le tri réorganise la liste de façon permanente — tu peux toujours réordonner manuellement ensuite.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

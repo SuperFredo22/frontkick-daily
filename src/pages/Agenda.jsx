@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { addDays, startOfWeek, formatDate, formatDayShort, isSameDay } from '../utils/date';
 import { useAgenda } from '../hooks/useAgenda';
+import { newId } from '../utils/id';
 import Modal from '../components/Modal';
 
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6h à 23h
@@ -30,12 +31,22 @@ function EventBlock({ event, onClick }) {
 
 const EMPTY_FORM = { titre: '', date: formatDate(new Date()), heureDebut: '', heureFin: '', lieu: '', note: '', recurrent: false };
 
-export default function Agenda() {
+export default function Agenda({ pendingCompose, onPendingConsumed }) {
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date()));
   const [agenda, setAgenda] = useAgenda();
   const [showForm, setShowForm] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+
+  // FAB "Nouveau RDV" → ouvrir le formulaire vierge
+  useEffect(() => {
+    if (pendingCompose === 'agenda') {
+      setEditEvent(null);
+      setForm({ ...EMPTY_FORM, date: formatDate(new Date()) });
+      setShowForm(true);
+      onPendingConsumed?.();
+    }
+  }, [pendingCompose]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -70,13 +81,13 @@ export default function Agenda() {
         return e;
       }));
     } else {
-      const id = Date.now();
+      const id = newId();
       if (form.recurrent) {
         const events = [];
         for (let i = 0; i < 52; i++) {
           const d = new Date(form.date);
           d.setDate(d.getDate() + i * 7);
-          events.push({ ...form, id: id + i, recurrentId: id, date: formatDate(d) });
+          events.push({ ...form, id: `${id}_${i}`, recurrentId: id, date: formatDate(d) });
         }
         setAgenda(prev => [...(prev || []), ...events]);
       } else {
@@ -89,6 +100,13 @@ export default function Agenda() {
   const deleteEvent = () => {
     if (!editEvent) return;
     setAgenda(prev => prev.filter(e => e.id !== editEvent.id));
+    setShowForm(false);
+  };
+
+  const deleteSeries = () => {
+    if (!editEvent?.recurrentId) return;
+    if (!window.confirm('Supprimer toutes les occurrences de ce RDV récurrent ?')) return;
+    setAgenda(prev => prev.filter(e => e.recurrentId !== editEvent.recurrentId));
     setShowForm(false);
   };
 
@@ -163,6 +181,11 @@ export default function Agenda() {
             {editEvent && (
               <button onClick={deleteEvent} className="py-2.5 px-4 rounded-lg bg-red-50 text-red-kick font-medium text-sm" style={{ color: 'var(--red)' }}>
                 Supprimer
+              </button>
+            )}
+            {editEvent?.recurrentId && (
+              <button onClick={deleteSeries} className="py-2.5 px-3 rounded-lg bg-red-50 font-medium text-sm" style={{ color: 'var(--red)' }}>
+                Série
               </button>
             )}
             <button

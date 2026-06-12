@@ -498,9 +498,9 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
             <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>Suite</p>
           </div>
           <div className="flex flex-col gap-3">
-            {queue.map((s, i) => (
+            {queue.map((s) => (
               <SuggestionCard
-                key={i}
+                key={`${s.banque}_${s.projet?.id ?? ''}_${s.item.id}`}
                 banque={s.banque}
                 item={s.item}
                 config={getSuggConfig(s)}
