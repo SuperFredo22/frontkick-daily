@@ -28,7 +28,7 @@ function buildPayload() {
 }
 
 function markSynced() {
-  try { localStorage.setItem(LAST_EXPORT_KEY, new Date().toISOString()); } catch {}
+  try { localStorage.setItem(LAST_EXPORT_KEY, new Date().toISOString()); } catch { /* quota */ }
 }
 
 // Synchro classique (au lancement, périodique)
@@ -57,5 +57,5 @@ export function syncBackupOnHide() {
       lastSync = Date.now();
       markSynced();
     }
-  } catch {}
+  } catch { /* beacon indisponible */ }
 }

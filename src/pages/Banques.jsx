@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
@@ -21,7 +21,7 @@ const TABS = [
 
 // ─── Item context menu ──────────────────────────────────────────────────────
 
-function ItemMenu({ open, onClose, itemLabel, color, onModifier, onDejaFait, onSupprimer }) {
+function ItemMenu({ open, onClose, itemLabel, onModifier, onDejaFait, onSupprimer }) {
   const [step, setStep] = useState('menu'); // 'menu' | 'confirm'
 
   const handleClose = () => { setStep('menu'); onClose(); };

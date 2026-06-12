@@ -128,7 +128,7 @@ export default async function handler(req, res) {
         // 404/410 = souscription expirée ou désinscrite → on nettoie le blob
         if (e.statusCode === 404 || e.statusCode === 410) {
           expired++;
-          try { await del(blob.url, { token: process.env.BLOB_READ_WRITE_TOKEN }); } catch {}
+          try { await del(blob.url, { token: process.env.BLOB_READ_WRITE_TOKEN }); } catch { /* déjà supprimé */ }
         } else {
           failed++;
           console.error('Push error:', e.message);

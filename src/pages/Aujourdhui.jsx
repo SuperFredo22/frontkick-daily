@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, ChevronRight } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { formatDateFR, formatDate, today, yesterday } from '../utils/date';
 import { useJournal, useReporteAujourdhui } from '../hooks/useJournal';
 import { useAllBanques } from '../hooks/useBanques';
@@ -19,7 +19,6 @@ function makeItemLabel(banque, item) {
   return item.description;
 }
 
-const BANQUE_EMOJI = { tiktok: '🎬', fightfocus: '🌐', marque: '👕' };
 const BANQUE_COLOR = { tiktok: 'var(--red)', fightfocus: 'var(--cyan)', marque: 'var(--orange)' };
 
 // Long-press hook: touch events on mobile (iOS doesn't cancel them for context-menu detection),
@@ -86,8 +85,8 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
 
   const [journal, setJournal] = useJournal(viewDate);
   const [reporte, setReporte] = useReporteAujourdhui(viewDate);
-  const [agenda, setAgenda] = useAgenda();
-  const { markDone, markUndone, getNextItem, hasAvailableItems } = useAllBanques();
+  const [, setAgenda] = useAgenda();
+  const { markDone, markUndone, getNextItem } = useAllBanques();
   const [projets, setProjets] = useProjets();
 
   const [bonusInput, setBonusInput] = useState('');
@@ -297,6 +296,8 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     }));
   };
 
+  const hab = journal?.habitudes || { prieres: 0, sport: false, cigarettes: 0, note: '' };
+
   // ─── Long press sur prières & cigarettes ─────────────────────────────────
   // Après un long press, iOS synthétise un click ~300ms après touchend qui frappe
   // le fond du modal et le refermerait immédiatement. Ce ref bloque la fermeture
@@ -319,7 +320,6 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   );
 
   const noSportDays = getConsecutiveNoSportDays();
-  const hab = journal?.habitudes || { prieres: 0, sport: false, cigarettes: 0, note: '' };
   const tachesFaites    = (journal?.taches || []).filter(t => t.statut === 'fait');
   const tachesReportees = (journal?.taches || []).filter(t => t.statut === 'reporte');
 
@@ -617,12 +617,6 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           </p>
           <Card>
             {tachesFaites.map((t, i) => {
-              const color = t.banque === 'tiktok' ? 'var(--red)'
-                : t.banque === 'fightfocus' ? 'var(--cyan)'
-                : t.banque === 'marque' ? 'var(--orange)'
-                : t.banque === 'projet'
-                ? (projets.find(p => p.id === t.projetId)?.couleur || 'var(--ink-3)')
-                : 'var(--ink-3)';
               return (
                 <div key={i} className="flex items-center gap-2 mb-2">
                   <span

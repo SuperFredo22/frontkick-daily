@@ -18,7 +18,7 @@ const COMPOSE_OPTIONS = [
   { id: 'bonus',      emoji: '⚡', label: 'Tâche bonus',       color: '#0F172A' },
 ];
 
-function TabItem({ id, label, Icon, active, onClick }) {
+function TabItem({ label, Icon, active, onClick }) {
   return (
     <button
       onClick={onClick}
