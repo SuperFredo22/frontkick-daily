@@ -1,16 +1,55 @@
-# React + Vite
+# ⚡ Frontkick Daily
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+PWA personnelle de pilotage quotidien : habitudes (prières, sport, cigarettes), banques de tâches (TikTok, FightFocus, Marque, Projets), agenda hebdomadaire, statistiques, et coach IA.
 
-Currently, two official plugins are available:
+Conçue pour iPhone (installée via « Ajouter à l'écran d'accueil »), hébergée sur Vercel.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+- **Front** : React 19 + Vite, Tailwind CSS, recharts, dnd-kit, lucide-react
+- **Données** : 100 % localStorage (préfixe `fk_`), avec export/import JSON et sauvegarde auto optionnelle vers Vercel Blob
+- **API** (fonctions serverless Vercel, dossier `api/`) :
+  - `chat.js` — proxy Perplexity Sonar pour le coach IA
+  - `subscribe.js` — enregistrement des souscriptions push (multi-appareils)
+  - `cron.js` — envoi des notifications push (avec skip intelligent)
+  - `backup.js` — réception du résumé du jour + sauvegarde complète rotative (7 jours)
+  - `health.js` — diagnostic de la config
+- **Notifications** : Web Push (VAPID) déclenchées par GitHub Actions (`.github/workflows/notifications.yml`), horaires en heure de Paris (été/hiver gérés)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Démarrage
 
-## Expanding the ESLint configuration
+```bash
+npm install
+npm run dev       # serveur local
+npm run build     # build de production
+npm test          # tests unitaires (vitest)
+npm run lint      # eslint
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Variables d'environnement (Vercel)
+
+| Variable | Rôle |
+|---|---|
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob (souscriptions push + backups) |
+| `CRON_SECRET` | Doit correspondre au secret GitHub Actions du même nom |
+| `PERPLEXITY_API_KEY` | Optionnelle — clé du coach IA côté serveur (sinon saisie dans l'app) |
+
+## Architecture des données (localStorage)
+
+| Clé | Contenu |
+|---|---|
+| `fk_journal_YYYY-MM-DD` | Journal du jour : tâches, habitudes, bonus, sport |
+| `fk_tiktok` / `fk_fightfocus` / `fk_marque` | Banques de tâches |
+| `fk_projets` | Projets et leurs tâches |
+| `fk_agenda` | Événements agenda |
+| `fk_reporte_YYYY-MM-DD` | Tâches passées (« skip ») du jour |
+| `fk_coach_session_YYYY-MM-DD` | Conversation coach du jour (purge > 7 j) |
+| `fk_coach_bilans` | Résumés des 14 derniers bilans |
+| `fk_pin` | Hash SHA-256 salé du code PIN |
+| `fk_theme` | `auto` / `light` / `dark` |
+| `fk_autobackup` | Sauvegarde auto en ligne activée (opt-in) |
+
+## Notifications intelligentes
+
+Si la sauvegarde auto est activée, l'app pousse un résumé du jour (`daily-state.json`) ; `api/cron.js` saute alors les rappels déjà accomplis (prières faites, sport fait, journal rempli…). Sans résumé, tous les rappels partent (fail-open).

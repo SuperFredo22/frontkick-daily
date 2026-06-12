@@ -1,17 +1,29 @@
 export default async function handler(req, res) {
+  // GET → l'app demande si une clé est configurée côté serveur
+  // (variable d'environnement Vercel PERPLEXITY_API_KEY)
+  if (req.method === 'GET') {
+    return res.status(200).json({ serverKey: !!process.env.PERPLEXITY_API_KEY });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const { apiKey, systemPrompt, history, userMessage } = req.body;
 
-  if (!apiKey || !userMessage) {
+  // Clé serveur prioritaire ; fallback sur la clé fournie par le client
+  const key = process.env.PERPLEXITY_API_KEY || apiKey;
+
+  if (!key) {
+    return res.status(401).json({ error: { code: 'NO_API_KEY', message: 'Aucune clé API configurée' } });
+  }
+  if (!userMessage) {
     return res.status(400).json({ error: { message: 'Paramètres manquants' } });
   }
 
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...history,
+    ...(history || []),
     { role: 'user', content: userMessage },
   ];
 
@@ -20,7 +32,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({
         model: 'sonar',

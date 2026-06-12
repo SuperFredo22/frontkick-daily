@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Bot, Send, Key, AlertTriangle, Info, Lightbulb, ShieldAlert, RefreshCw, Bell, BellOff } from 'lucide-react';
 import { analyzeData, buildSystemPrompt } from '../utils/dataAnalyst';
-import { callGemini } from '../utils/gemini';
+import { callCoach, hasServerKey } from '../utils/coachApi';
 import { getNotificationStatus, subscribeToNotifications, unsubscribeFromNotifications } from '../utils/notifications';
 import { formatDate } from '../utils/date';
 
@@ -259,8 +259,12 @@ function NotifCard() {
   );
 }
 
-export default function Coach() {
+const WEEKLY_PROMPT = "Fais-moi le bilan de ma semaine écoulée : tendances sport, prières, cigarettes et tâches accomplies. Donne-moi 2 victoires, 1 point faible, et 1 priorité concrète pour la semaine qui arrive.";
+
+export default function Coach({ pendingCompose, onPendingConsumed }) {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '');
+  // null = en cours de vérification ; true = clé configurée sur Vercel (pas de setup nécessaire)
+  const [serverKey, setServerKey] = useState(null);
   const [messages, setMessages] = useState(() => {
     try {
       cleanOldSessions();
@@ -292,6 +296,20 @@ export default function Coach() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
+  useEffect(() => {
+    hasServerKey().then(setServerKey);
+  }, []);
+
+  const ready = !!apiKey || serverKey === true;
+
+  // Deep link « bilan hebdo » (notification du dimanche soir)
+  useEffect(() => {
+    if (pendingCompose !== 'bilan-hebdo') return;
+    if (serverKey === null) return; // attendre de savoir si une clé existe
+    onPendingConsumed?.();
+    if (ready && !loading) sendMessage(WEEKLY_PROMPT);
+  }, [pendingCompose, serverKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const chatHistory = messages.map(m => ({
     role: m.role === 'user' ? 'user' : 'assistant',
     content: m.text,
@@ -305,7 +323,7 @@ export default function Coach() {
     setLoading(true);
 
     try {
-      const reply = await callGemini(apiKey, systemPrompt, chatHistory, text.trim());
+      const reply = await callCoach(apiKey, systemPrompt, chatHistory, text.trim());
       setMessages(prev => {
         const isFirstAI = prev.filter(m => m.role === 'model').length === 0;
         if (isFirstAI) saveBilan(reply);
@@ -352,9 +370,17 @@ export default function Coach() {
         )}
       </div>
 
-      {!apiKey ? (
+      {!ready && serverKey === null ? (
+        <div className="flex-1 flex items-center justify-center">
+          <RefreshCw size={18} className="animate-spin" style={{ color: 'var(--ink-3)' }} />
+        </div>
+      ) : !ready ? (
         <div className="flex-1 overflow-auto">
           <SetupCard onSave={handleSave} />
+          <p className="text-xs text-center px-6 mt-3" style={{ color: 'var(--ink-3)' }}>
+            Astuce : ajoute la variable <strong>PERPLEXITY_API_KEY</strong> sur Vercel
+            pour ne plus jamais avoir à coller de clé ici.
+          </p>
         </div>
       ) : (
         <>

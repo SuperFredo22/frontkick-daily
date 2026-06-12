@@ -18,4 +18,14 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    // Fonctions serverless Vercel + configs : environnement Node
+    files: ['api/**/*.js', 'vite.config.js', 'vitest.config.js'],
+    languageOptions: { globals: { ...globals.node } },
+  },
+  {
+    // Service worker
+    files: ['public/sw.js'],
+    languageOptions: { globals: { ...globals.serviceworker } },
+  },
 ])

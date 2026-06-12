@@ -6,6 +6,8 @@ import { useAllBanques } from '../hooks/useBanques';
 import { useProjets, getNextProjetTask, getActiveProjects } from '../hooks/useProjets';
 import { useAgenda } from '../hooks/useAgenda';
 import { getConsecutiveNoSportDays } from '../utils/stats';
+import { daysSinceLastBackup } from '../utils/backup';
+import { isAutoBackupEnabled } from '../utils/autoBackup';
 import SuggestionCard from '../components/SuggestionCard';
 import Card from '../components/Card';
 import SportModule from '../components/sport/SportModule';
@@ -121,13 +123,28 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const hero  = allSuggestions[0] || null;
   const queue = allSuggestions.slice(1);
 
-  // Handle pendingCompose from FAB
+  // Handle pendingCompose from FAB ou deep link de notification
   useEffect(() => {
     if (pendingCompose === 'bonus') {
       setShowBonusInput(true);
       onPendingConsumed?.();
+    } else if (pendingCompose === 'sport') {
+      setShowSportSheet(true);
+      onPendingConsumed?.();
+    } else if (pendingCompose === 'note') {
+      setShowNoteModal(true);
+      onPendingConsumed?.();
     }
   }, [pendingCompose]);
+
+  // Badge sur l'icône de l'app (PWA iOS 16.4+) : nombre de tâches restantes
+  useEffect(() => {
+    if (isYesterday) return;
+    try {
+      if (allSuggestions.length > 0) navigator.setAppBadge?.(allSuggestions.length);
+      else navigator.clearAppBadge?.();
+    } catch { /* non supporté */ }
+  }, [allSuggestions.length, isYesterday]);
 
   // ─── Agenda event ────────────────────────────────────────────────────────
 
@@ -380,6 +397,23 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           <span className="text-xl">⚠️</span>
           <p className="text-sm text-amber-800 font-medium">{noSportDays} jours sans sport — bouge !</p>
         </div>
+      )}
+
+      {/* Rappel de sauvegarde : jamais sauvegardé ou > 7 jours */}
+      {!isYesterday && !isAutoBackupEnabled() && (daysSinceLastBackup() === null || daysSinceLastBackup() > 7) && (
+        <button
+          onClick={onOpenSettings}
+          className="mx-4 mt-2 rounded-xl px-4 py-2.5 flex items-center gap-3 text-left btn-press"
+          style={{ background: 'var(--red-50)', border: '1px solid #F4D5D1' }}
+        >
+          <span className="text-xl">💾</span>
+          <span className="text-sm font-medium flex-1" style={{ color: 'var(--ink-2)' }}>
+            {daysSinceLastBackup() === null
+              ? 'Tes données ne sont pas sauvegardées — exporte-les ou active la sauvegarde auto'
+              : `Dernière sauvegarde il y a ${daysSinceLastBackup()} jours`}
+          </span>
+          <span className="text-xs font-semibold shrink-0" style={{ color: 'var(--red)' }}>Réglages ›</span>
+        </button>
       )}
 
       {/* ── Habits strip ───────────────────────────────────────────────── */}
