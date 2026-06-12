@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   let subscription = { count: 0, error: null };
   try {
     const { blobs } = await list({
-      prefix: 'push-subscription',
+      prefix: 'push-sub',
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
     subscription.count = blobs.length;

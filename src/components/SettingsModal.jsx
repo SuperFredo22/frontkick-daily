@@ -1,26 +1,6 @@
 import { useRef, useState } from 'react';
 import Modal from './Modal';
-
-function collectData() {
-  const data = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key.startsWith('fk_')) data[key] = localStorage.getItem(key);
-  }
-  return data;
-}
-
-function triggerDownload(json, filename) {
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+import { collectData, exportAllData } from '../utils/backup';
 
 export default function SettingsModal({ open, onClose }) {
   const fileRef = useRef(null);
@@ -28,11 +8,8 @@ export default function SettingsModal({ open, onClose }) {
   const [importError, setImportError] = useState('');
 
   const handleExport = () => {
-    const data = collectData();
-    const count = Object.keys(data).length;
+    const count = exportAllData();
     if (count === 0) { alert('Aucune donnée à exporter.'); return; }
-    const date = new Date().toISOString().split('T')[0];
-    triggerDownload(JSON.stringify(data, null, 2), `frontkick-backup-${date}.json`);
     setExportDone(true);
     setTimeout(() => setExportDone(false), 3000);
   };

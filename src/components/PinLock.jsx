@@ -3,23 +3,36 @@ import { useState } from 'react';
 const PIN_KEY  = 'fk_pin';
 const SESSION_KEY = 'fk_unlocked';
 
-function hashPin(pin) {
-  // Simple obfuscation — not crypto-grade, but prevents casual localStorage inspection
-  return btoa(pin.split('').reverse().join('') + '_fk');
+// ── Hash SHA-256 salé (format v2:<salt>:<hash>) ──────────────────────────────
+async function sha256Hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function getPinHash() {
-  return localStorage.getItem(PIN_KEY) || null;
+function randomSalt() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function setPinHash(pin) {
-  localStorage.setItem(PIN_KEY, hashPin(pin));
+async function setPinHash(pin) {
+  const salt = randomSalt();
+  const hash = await sha256Hex(`${salt}:${pin}`);
+  localStorage.setItem(PIN_KEY, `v2:${salt}:${hash}`);
 }
 
-function checkPin(pin) {
-  const stored = getPinHash();
+async function checkPin(pin) {
+  const stored = localStorage.getItem(PIN_KEY);
   if (!stored) return false;
-  return stored === hashPin(pin);
+  if (stored.startsWith('v2:')) {
+    const [, salt, hash] = stored.split(':');
+    return (await sha256Hex(`${salt}:${pin}`)) === hash;
+  }
+  // Ancien format (btoa réversible) : vérifier puis migrer silencieusement vers v2
+  if (stored === btoa(pin.split('').reverse().join('') + '_fk')) {
+    await setPinHash(pin);
+    return true;
+  }
+  return false;
 }
 
 function unlock() {
@@ -117,9 +130,9 @@ export default function PinLock({ onUnlocked }) {
     setError('');
   };
 
-  const submit = (value) => {
+  const submit = async (value) => {
     if (mode === 'enter') {
-      if (checkPin(value)) {
+      if (await checkPin(value)) {
         unlock();
         onUnlocked();
       } else {
@@ -133,7 +146,7 @@ export default function PinLock({ onUnlocked }) {
         setStep(2);
       } else {
         if (value === first) {
-          setPinHash(value);
+          await setPinHash(value);
           unlock();
           onUnlocked();
         } else {
@@ -190,17 +203,28 @@ export default function PinLock({ onUnlocked }) {
         <Keypad onDigit={handleDigit} onDelete={handleDelete} />
       </div>
 
-      {/* Reset link (only in 'enter' mode) */}
+      {/* Reset link (only in 'enter' mode).
+          Le reset efface TOUTES les données : sans ça, le PIN serait contournable
+          en 2 taps par n'importe qui ayant le téléphone en main. */}
       {mode === 'enter' && (
         <button
           onClick={() => {
-            if (window.confirm('Supprimer le code PIN ? Tu devras en créer un nouveau.')) {
-              localStorage.removeItem(PIN_KEY);
-              setMode('set');
-              setStep(1);
-              setPin('');
-              setFirst('');
+            if (!window.confirm(
+              'Code oublié ?\n\nPar sécurité, réinitialiser le PIN effacera TOUTES les données de l\'app (journal, projets, banques, agenda).\n\nContinuer ?'
+            )) return;
+            if (!window.confirm(
+              'Dernière confirmation.\n\nAs-tu une sauvegarde exportée ? Tu pourras la réimporter après. Sans sauvegarde, tout sera perdu définitivement.'
+            )) return;
+            const toDelete = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k?.startsWith('fk_')) toDelete.push(k);
             }
+            toDelete.forEach(k => localStorage.removeItem(k));
+            setMode('set');
+            setStep(1);
+            setPin('');
+            setFirst('');
           }}
           style={{ marginTop: 32, fontSize: 12, color: 'var(--ink-3)', background: 'none', border: 'none', cursor: 'pointer' }}
         >
