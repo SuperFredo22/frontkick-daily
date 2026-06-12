@@ -1,8 +1,41 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
-import { computeStreak, getMonthStats, getLast30DaysStats, getCigaretteFreeDays, getJournalForDate, getSportMonthStats, computeSportStreak, getSportLast30Days } from '../utils/stats';
+import { computeStreak, getMonthStats, getLast30DaysStats, getCigaretteFreeDays, getJournalForDate, getSportMonthStats, computeSportStreak, getSportLast30Days, getHeatmapData } from '../utils/stats';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
+
+// Heatmap type GitHub : 1 colonne par semaine, 1 case par jour (lun → dim)
+const HEAT_COLORS = ['var(--line-2)', '#F4C7C0', '#E89A8E', '#D4675A', '#C0392B'];
+
+function Heatmap({ days, onSelect }) {
+  const weeks = [];
+  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
+  return (
+    <div>
+      <div className="flex gap-1">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="flex flex-col gap-1 flex-1">
+            {week.map(d => (
+              <button
+                key={d.date}
+                onClick={() => onSelect(d.date)}
+                title={`${d.date} — ${d.count} activité${d.count > 1 ? 's' : ''}`}
+                style={{ aspectRatio: '1 / 1', width: '100%', borderRadius: 3, background: HEAT_COLORS[d.level], border: 'none', padding: 0 }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-end gap-1.5 mt-2">
+        <span className="text-[9px] text-gray-400">Moins</span>
+        {HEAT_COLORS.map((c, i) => (
+          <span key={i} style={{ width: 8, height: 8, borderRadius: 2, background: c, display: 'inline-block' }} />
+        ))}
+        <span className="text-[9px] text-gray-400">Plus</span>
+      </div>
+    </div>
+  );
+}
 
 function StatBox({ label, value, sub, color }) {
   return (
@@ -24,6 +57,7 @@ export default function Stats() {
   const [sportMonth, setSportMonth] = useState({ club: 0, gym: 0, maison: 0, autre: 0, total: 0, totalDuree: 0, topType: null });
   const [sportStreak, setSportStreak] = useState(0);
   const [sportDaily, setSportDaily] = useState([]);
+  const [heatmap, setHeatmap] = useState([]);
 
   useEffect(() => {
     setStreak(computeStreak());
@@ -33,7 +67,13 @@ export default function Stats() {
     setSportMonth(getSportMonthStats());
     setSportStreak(computeSportStreak());
     setSportDaily(getSportLast30Days());
+    setHeatmap(getHeatmapData(12));
   }, []);
+
+  const openDetail = (dateStr) => {
+    setDetailDate(dateStr);
+    setDetailJournal(getJournalForDate(dateStr));
+  };
 
   const handleBarClick = (data) => {
     if (!data?.activePayload?.[0]?.payload?.date) return;
@@ -58,6 +98,17 @@ export default function Stats() {
           <div className="text-sm text-gray-500">jours consécutifs avec au moins 1 tâche</div>
         </div>
       </Card>
+
+      {/* Heatmap 12 semaines */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Activité — 12 dernières semaines
+        </h2>
+        <Card className="p-3">
+          <Heatmap days={heatmap} onSelect={openDetail} />
+          <p className="text-[10px] text-gray-400 text-center mt-2">Tâches + sport par jour · toucher une case pour le détail</p>
+        </Card>
+      </section>
 
       {/* Monthly stats */}
       <section>
@@ -109,6 +160,23 @@ export default function Stats() {
           <div className="text-sm text-gray-500">jours sans cigarette sur les 30 derniers</div>
         </div>
       </Card>
+
+      {/* Cigarettes 30 jours */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+          Cigarettes — 30 derniers jours
+        </h2>
+        <Card className="p-3">
+          <ResponsiveContainer width="100%" height={100}>
+            <BarChart data={chartData} onClick={handleBarClick} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 8, fill: 'var(--ink-3)' }} tickLine={false} interval={6} />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                formatter={(v) => [v, 'Cigarettes']} />
+              <Bar dataKey="cigarettes" fill="var(--orange)" radius={[3, 3, 0, 0]} maxBarSize={20} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      </section>
 
       {/* Sport ce mois-ci */}
       <section>

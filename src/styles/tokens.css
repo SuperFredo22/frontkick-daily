@@ -30,3 +30,78 @@
   --shadow-lift: 0 8px 24px -8px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.04);
   --shadow-fab: 0 8px 20px -4px rgba(192,57,43,.45), 0 4px 8px -2px rgba(192,57,43,.25);
 }
+
+/* ── Mode sombre ─────────────────────────────────────────────────────────────
+   Appliqué via data-theme="dark" sur <html> (voir src/utils/theme.js).
+   Les composants qui utilisent var(--*) s'adaptent automatiquement ;
+   les classes Tailwind grises sont remappées plus bas. */
+[data-theme="dark"] {
+  --bg: #101418;
+  --surface: #1A2026;
+
+  --ink: #E8EDF2;
+  --ink-2: #B3BECA;
+  --ink-3: #6C7A89;
+
+  --line: #2A323B;
+  --line-2: #232A32;
+
+  --red: #E05A4B;
+  --red-soft: #3A211D;
+  --red-50: #2E1B18;
+
+  --cyan: #2BC6E8;
+  --cyan-soft: #11353C;
+  --orange: #F0913B;
+  --orange-soft: #3A2A14;
+  --green: #2FBF6B;
+  --green-soft: #14321F;
+
+  --shadow-card: 0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+  --shadow-lift: 0 8px 24px -8px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.4);
+  --shadow-fab: 0 8px 20px -4px rgba(224,90,75,.4), 0 4px 8px -2px rgba(0,0,0,.4);
+
+  color-scheme: dark;
+}
+
+/* Remap ciblé des classes Tailwind utilisées avec des gris « en dur ».
+   text-white n'est PAS remappé (boutons colorés). */
+[data-theme="dark"] .bg-white       { background-color: var(--surface); }
+[data-theme="dark"] .bg-gray-50     { background-color: #1E252C; }
+[data-theme="dark"] .bg-gray-100    { background-color: #232A32; }
+[data-theme="dark"] .bg-gray-200    { background-color: #2A323B; }
+[data-theme="dark"] .hover\:bg-gray-50:hover   { background-color: #232A32; }
+[data-theme="dark"] .hover\:bg-gray-100:hover  { background-color: #2A323B; }
+[data-theme="dark"] .active\:bg-gray-100:active { background-color: #2A323B; }
+[data-theme="dark"] .active\:bg-gray-200:active { background-color: #343E49; }
+[data-theme="dark"] .hover\:bg-red-50:hover    { background-color: var(--red-50); }
+[data-theme="dark"] .bg-red-50      { background-color: var(--red-50); }
+
+[data-theme="dark"] .text-gray-900  { color: var(--ink); }
+[data-theme="dark"] .text-gray-800  { color: #DCE3EA; }
+[data-theme="dark"] .text-gray-700  { color: #C8D1DB; }
+[data-theme="dark"] .text-gray-600  { color: #AAB6C2; }
+[data-theme="dark"] .text-gray-500  { color: #8694A3; }
+[data-theme="dark"] .text-gray-400  { color: #6C7A89; }
+[data-theme="dark"] .text-gray-300  { color: #525E6B; }
+
+[data-theme="dark"] .border-gray-50  { border-color: #232A32; }
+[data-theme="dark"] .border-gray-100 { border-color: #2A323B; }
+[data-theme="dark"] .border-gray-200 { border-color: #343E49; }
+
+[data-theme="dark"] .bg-amber-50    { background-color: #332714; }
+[data-theme="dark"] .border-amber-200 { border-color: #4D3A1E; }
+[data-theme="dark"] .border-amber-300 { border-color: #5C4624; }
+[data-theme="dark"] .text-amber-800 { color: #F0C674; }
+
+[data-theme="dark"] .text-green-500,
+[data-theme="dark"] .text-green-600 { color: var(--green); }
+
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--line-2);
+  color: var(--ink);
+  border-color: var(--line) !important;
+}
+[data-theme="dark"] ::placeholder { color: var(--ink-3); }

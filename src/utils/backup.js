@@ -30,7 +30,7 @@ export function exportAllData() {
   if (count === 0) return 0;
   const date = new Date().toISOString().split('T')[0];
   triggerDownload(JSON.stringify(data, null, 2), `frontkick-backup-${date}.json`);
-  try { localStorage.setItem(LAST_EXPORT_KEY, new Date().toISOString()); } catch {}
+  try { localStorage.setItem(LAST_EXPORT_KEY, new Date().toISOString()); } catch { /* quota */ }
   return count;
 }
 

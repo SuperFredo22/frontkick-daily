@@ -25,7 +25,7 @@ function cleanOldSessions() {
       if (k?.startsWith('fk_coach_session_') && k < cutoffStr) toDelete.push(k);
     }
     toDelete.forEach(k => localStorage.removeItem(k));
-  } catch {}
+  } catch { /* storage indisponible */ }
 }
 
 function saveBilan(text) {
@@ -36,7 +36,7 @@ function saveBilan(text) {
     const others  = bilans.filter(b => b.date !== today);
     others.unshift({ date: today, resume: clean });
     localStorage.setItem(BILANS_KEY, JSON.stringify(others.slice(0, 14)));
-  } catch {}
+  } catch { /* storage indisponible */ }
 }
 
 function getBilanContext() {
@@ -175,7 +175,7 @@ const NOTIF_STATUS_LABELS = {
   'denied':                 { label: 'Bloqué dans les réglages iPhone',    color: 'var(--red)'   },
   'default':                { label: 'Non activé',                         color: 'var(--ink-3)' },
   'granted-not-subscribed': { label: 'Permission accordée, non inscrit',  color: '#D97706'       },
-  'subscribed':             { label: '✓ Actif — 9 rappels par jour',       color: '#16A34A'      },
+  'subscribed':             { label: '✓ Actif — rappels quotidiens + bilan hebdo', color: '#16A34A' },
 };
 
 function NotifCard() {

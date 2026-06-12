@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
@@ -202,6 +202,8 @@ function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({});
   const [showDone, setShowDone] = useState(false);
+  const [deleted, setDeleted] = useState(null); // { item, index } → toast « Annuler »
+  const undoTimer = useRef(null);
   const tab = TABS.find(t => t.id === banque);
 
   const sensors = useSensors(
@@ -267,7 +269,28 @@ function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 
   };
 
   const handleDejaFait = (id) => setItems(prev => prev.map(i => i.id === id ? { ...i, statut: 'deja_fait' } : i));
-  const handleSupprimer = (id) => setItems(prev => prev.filter(i => i.id !== id));
+
+  // Suppression avec possibilité d'annuler pendant 5 s (swipe accidentel)
+  const handleSupprimer = (id) => {
+    const index = items.findIndex(i => i.id === id);
+    if (index === -1) return;
+    const item = items[index];
+    setItems(prev => prev.filter(i => i.id !== id));
+    setDeleted({ item, index });
+    clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setDeleted(null), 5000);
+  };
+
+  const undoDelete = () => {
+    if (!deleted) return;
+    clearTimeout(undoTimer.current);
+    setItems(prev => {
+      const next = [...prev];
+      next.splice(Math.min(deleted.index, next.length), 0, deleted.item);
+      return next;
+    });
+    setDeleted(null);
+  };
 
   const isOpen = !!editItem || showAdd;
 
@@ -308,6 +331,30 @@ function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 
           ))}
         </SortableContext>
       </DndContext>
+
+      {/* Toast annulation suppression */}
+      {deleted && (
+        <div
+          className="fixed left-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl"
+          style={{
+            bottom: 'calc(96px + env(safe-area-inset-bottom))',
+            transform: 'translateX(-50%)',
+            background: 'var(--ink)',
+            color: 'var(--bg)',
+            boxShadow: 'var(--shadow-lift)',
+            maxWidth: 'calc(100vw - 32px)',
+          }}
+        >
+          <span className="text-sm truncate" style={{ maxWidth: 200 }}>🗑️ Supprimé</span>
+          <button
+            onClick={undoDelete}
+            className="text-sm font-bold shrink-0 btn-press"
+            style={{ color: 'var(--orange)' }}
+          >
+            Annuler
+          </button>
+        </div>
+      )}
 
       {/* Deja fait items (non-draggable, outside SortableContext intentionally) */}
       {showDone && dejaFait.length > 0 && (

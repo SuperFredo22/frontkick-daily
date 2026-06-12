@@ -5,7 +5,8 @@ import { useJournal, useReporteAujourdhui } from '../hooks/useJournal';
 import { useAllBanques } from '../hooks/useBanques';
 import { useProjets, getNextProjetTask, getActiveProjects } from '../hooks/useProjets';
 import { useAgenda } from '../hooks/useAgenda';
-import { getConsecutiveNoSportDays } from '../utils/stats';
+import { getConsecutiveNoSportDays, getWeekProgress } from '../utils/stats';
+import { useObjectifs } from '../hooks/useObjectifs';
 import { daysSinceLastBackup } from '../utils/backup';
 import { isAutoBackupEnabled } from '../utils/autoBackup';
 import SuggestionCard from '../components/SuggestionCard';
@@ -20,6 +21,42 @@ function makeItemLabel(banque, item) {
 }
 
 const BANQUE_COLOR = { tiktok: 'var(--red)', fightfocus: 'var(--cyan)', marque: 'var(--orange)' };
+
+const OBJECTIF_META = {
+  sport:      { emoji: '🥊', color: 'var(--green)' },
+  tiktok:     { emoji: '🎬', color: 'var(--red)' },
+  fightfocus: { emoji: '🌐', color: 'var(--cyan)' },
+  marque:     { emoji: '👕', color: 'var(--orange)' },
+};
+
+// Jauges de progression des objectifs hebdo (configurés dans les réglages)
+function ObjectifsHebdo({ objectifs, progress }) {
+  const actifs = Object.entries(objectifs || {}).filter(([, target]) => target > 0);
+  if (actifs.length === 0) return null;
+  return (
+    <div className="flex gap-2 px-5 mt-3">
+      {actifs.map(([key, target]) => {
+        const meta = OBJECTIF_META[key];
+        const done = progress[key] || 0;
+        const pct = Math.min(100, (done / target) * 100);
+        const reached = done >= target;
+        return (
+          <div key={key} className="flex-1 rounded-xl px-2.5 py-2" style={{ background: 'var(--surface)', boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span style={{ fontSize: 13 }}>{meta.emoji}</span>
+              <span className="text-[11px] font-bold" style={{ color: reached ? 'var(--green)' : 'var(--ink-2)' }}>
+                {reached ? '✓ ' : ''}{done}/{target}
+              </span>
+            </div>
+            <div style={{ height: 4, borderRadius: 2, background: 'var(--line-2)', overflow: 'hidden' }}>
+              <div style={{ width: `${pct}%`, height: '100%', borderRadius: 2, background: reached ? 'var(--green)' : meta.color, transition: 'width 300ms ease' }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // Long-press hook: touch events on mobile (iOS doesn't cancel them for context-menu detection),
 // pointer events on desktop. delay ms = long press threshold.
@@ -102,6 +139,10 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const [editCigs, setEditCigs] = useState(0);
 
   const skipped = reporte || [];
+
+  const [objectifs] = useObjectifs();
+  // Recalculé quand le journal change (tâche faite/annulée, sport…)
+  const weekProgress = getWeekProgress(); // eslint-disable-line
 
   const nextTiktok     = getNextItem('tiktok',     skipped);
   const nextFightfocus = getNextItem('fightfocus', skipped);
@@ -493,6 +534,9 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           <span className="truncate">{hab.note || 'Note…'}</span>
         </button>
       </div>
+
+      {/* ── Objectifs hebdo ────────────────────────────────────────────── */}
+      {!isYesterday && <ObjectifsHebdo objectifs={objectifs} progress={weekProgress} />}
 
       {/* ── À faire maintenant ─────────────────────────────────────────── */}
       <section className="px-4 mt-5">
