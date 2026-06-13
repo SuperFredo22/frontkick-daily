@@ -8,6 +8,7 @@ import { useAgenda } from '../hooks/useAgenda';
 import { getConsecutiveNoSportDays } from '../utils/stats';
 import { useProgression } from '../hooks/useProgression';
 import { XP } from '../utils/gamification';
+import { newlyUnlockedByLevel } from '../utils/unlockables';
 import SuggestionCard from '../components/SuggestionCard';
 import HUD from '../components/HUD';
 import { XpFlash, LevelUpOverlay } from '../components/RewardFx';
@@ -103,7 +104,13 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const prevLevelRef = useRef(prog.level);
   const flashXp = (amount) => setXpFlash(f => ({ amount, trigger: f.trigger + 1 }));
   useEffect(() => {
-    if (prog.level > prevLevelRef.current) setLevelUp({ level: prog.level, rank: prog.rank });
+    if (prog.level > prevLevelRef.current) {
+      setLevelUp({
+        level: prog.level,
+        rank: prog.rank,
+        unlocks: newlyUnlockedByLevel(prevLevelRef.current, prog.level),
+      });
+    }
     prevLevelRef.current = prog.level;
   }, [prog.level, prog.rank]);
 
@@ -819,6 +826,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       <LevelUpOverlay
         level={levelUp?.level}
         rank={levelUp?.rank}
+        unlocks={levelUp?.unlocks}
         onClose={() => setLevelUp(null)}
       />
     </div>

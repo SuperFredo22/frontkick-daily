@@ -4,6 +4,9 @@ import * as Icons from 'lucide-react';
 import { Flame, Trophy, Lock } from 'lucide-react';
 import { getMonthStats, getLast30DaysStats, getCigaretteFreeDays, getJournalForDate, getSportMonthStats, computeSportStreak, getSportLast30Days } from '../utils/stats';
 import { useProgression } from '../hooks/useProgression';
+import { useCosmetics } from '../hooks/useCosmetics';
+import { computeUnlocks } from '../utils/unlockables';
+import { Check, Lock as LockIcon, Palette, BadgeCheck } from 'lucide-react';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 
@@ -102,6 +105,99 @@ function BadgeTile({ badge }) {
   );
 }
 
+// ── Rewards (équipables) ──────────────────────────────────────────────────────
+function ThemeCard({ theme, equipped, onEquip }) {
+  return (
+    <button
+      onClick={() => theme.unlocked && onEquip(theme.id)}
+      disabled={!theme.unlocked}
+      className="rounded-card p-3 text-left btn-press"
+      style={{
+        background: 'var(--surface)',
+        border: `1px solid ${equipped ? 'var(--red)' : 'var(--line)'}`,
+        boxShadow: equipped ? '0 0 18px -8px var(--red)' : 'none',
+        opacity: theme.unlocked ? 1 : 0.55,
+      }}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span style={{ width: 38, height: 24, borderRadius: 8, background: `linear-gradient(135deg, ${theme.swatch[0]}, ${theme.swatch[1]})` }} />
+        <div className="flex-1 min-w-0">
+          <p className="font-display" style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{theme.name}</p>
+        </div>
+      </div>
+      <p style={{ fontSize: 10.5, color: 'var(--ink-3)', lineHeight: 1.3, minHeight: 26 }}>{theme.desc}</p>
+      <div className="mt-1.5">
+        {!theme.unlocked ? (
+          <span className="flex items-center gap-1" style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--ink-3)' }}>
+            <LockIcon size={11} /> Niveau {theme.unlockLevel}
+          </span>
+        ) : equipped ? (
+          <span className="flex items-center gap-1" style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--red)' }}>
+            <Check size={12} /> Équipé
+          </span>
+        ) : (
+          <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--ink-2)' }}>Équiper</span>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function TitleChip({ title, equipped, onEquip }) {
+  return (
+    <button
+      onClick={() => title.unlocked && onEquip(title.id)}
+      disabled={!title.unlocked}
+      className="rounded-xl px-3 py-2 text-left btn-press flex items-center gap-2"
+      style={{
+        background: equipped ? 'var(--red-soft)' : 'var(--surface)',
+        border: `1px solid ${equipped ? 'var(--red)' : 'var(--line)'}`,
+        opacity: title.unlocked ? 1 : 0.5,
+      }}
+    >
+      {title.unlocked
+        ? <BadgeCheck size={15} style={{ color: equipped ? 'var(--red)' : 'var(--ink-3)' }} />
+        : <LockIcon size={13} style={{ color: 'var(--ink-3)' }} />}
+      <div className="min-w-0">
+        <p className="font-display truncate" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>{title.name}</p>
+        <p className="truncate" style={{ fontSize: 10, color: 'var(--ink-3)' }}>{title.unlocked ? (equipped ? 'Équipé' : 'Disponible') : title.desc}</p>
+      </div>
+    </button>
+  );
+}
+
+function RewardsSection({ prog }) {
+  const { themeId, titleId, equipTheme, equipTitle } = useCosmetics();
+  const unlocks = computeUnlocks(prog);
+  const themesUnlocked = unlocks.themes.filter(t => t.unlocked).length;
+  const titlesUnlocked = unlocks.titles.filter(t => t.unlocked).length;
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'var(--ink-3)' }}>
+          <Palette size={13} /> Récompenses
+        </h2>
+        <span className="text-xs font-semibold" style={{ color: 'var(--red)' }}>{themesUnlocked + titlesUnlocked}/{unlocks.themes.length + unlocks.titles.length}</span>
+      </div>
+
+      <p className="text-xs mb-2" style={{ color: 'var(--ink-3)' }}>Thèmes d'accent — re-colorent toute l'app</p>
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {unlocks.themes.map(t => (
+          <ThemeCard key={t.id} theme={t} equipped={t.id === themeId} onEquip={equipTheme} />
+        ))}
+      </div>
+
+      <p className="text-xs mb-2" style={{ color: 'var(--ink-3)' }}>Titres de combattant</p>
+      <div className="grid grid-cols-2 gap-2">
+        {unlocks.titles.map(t => (
+          <TitleChip key={t.id} title={t} equipped={t.id === titleId} onEquip={equipTitle} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function Stats() {
   const [prog] = useProgression();
   const [monthStats, setMonthStats] = useState({ tiktok: 0, fightfocus: 0, marque: 0, projets: {} });
@@ -152,6 +248,9 @@ export default function Stats() {
           {prog.badges.map(b => <BadgeTile key={b.id} badge={b} />)}
         </div>
       </section>
+
+      {/* Récompenses équipables */}
+      <RewardsSection prog={prog} />
 
       {/* Monthly stats */}
       <section>

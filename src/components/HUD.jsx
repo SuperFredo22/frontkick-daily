@@ -1,4 +1,6 @@
 import { Flame, ChevronRight, Shield } from 'lucide-react';
+import { useCosmetics } from '../hooks/useCosmetics';
+import { getTitle } from '../utils/unlockables';
 
 /**
  * Combatant HUD — the "open like a game" header.
@@ -10,6 +12,9 @@ export default function HUD({ prog, onOpen }) {
     level, rank, intoLevel, levelSpan, toNext, progress,
     winStreak, totalXP,
   } = prog;
+
+  const { titleId } = useCosmetics();
+  const title = getTitle(titleId);
 
   return (
     <button
@@ -61,6 +66,11 @@ export default function HUD({ prog, onOpen }) {
             <span className="font-display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
               {rank.name}
             </span>
+            {title.id !== 'recrue' && (
+              <span className="font-display truncate" style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-3)', maxWidth: 110 }}>
+                · {title.name}
+              </span>
+            )}
             <ChevronRight size={15} style={{ color: 'var(--ink-3)', marginLeft: 'auto' }} />
           </div>
 
