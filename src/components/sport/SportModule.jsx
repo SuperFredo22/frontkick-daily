@@ -3,6 +3,7 @@ import Modal from '../Modal';
 import SeanceSelector from './SeanceSelector';
 import SeanceEnCours from './SeanceEnCours';
 import SeanceRecap from './SeanceRecap';
+import RoundTimer from './RoundTimer';
 
 const TYPE_LABELS = { club: 'Club MMA', gym: 'Gym', maison: 'Maison', autre: 'Autre' };
 
@@ -154,7 +155,7 @@ export default function SportModule({ journal, onSportSave, onSportClear, setAge
   return (
     <>
       <div className="py-2 border-b border-gray-50">
-        <span className="text-sm font-medium text-gray-700 block mb-2">🥊 Sport</span>
+        <span className="text-sm font-medium text-gray-700 block mb-2">🥊 Entraînement</span>
         <div className="grid grid-cols-2 gap-2">
           {SPORT_TYPES.map(({ key, emoji, label }) => (
             <button
@@ -166,6 +167,13 @@ export default function SportModule({ journal, onSportSave, onSportClear, setAge
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setStep('rounds')}
+          className="btn-press w-full mt-2 py-2.5 rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2"
+          style={{ background: 'var(--grad-fire)' }}
+        >
+          🥊 Minuteur de rounds
+        </button>
       </div>
 
       <ClubModal
@@ -202,6 +210,13 @@ export default function SportModule({ journal, onSportSave, onSportClear, setAge
         onSave={handleSave}
         onClose={() => setStep(null)}
       />
+
+      {step === 'rounds' && (
+        <RoundTimer
+          onFinish={data => { onSportSave(data); setStep(null); }}
+          onClose={() => setStep(null)}
+        />
+      )}
     </>
   );
 }

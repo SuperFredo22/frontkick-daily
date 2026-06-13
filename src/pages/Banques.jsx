@@ -400,7 +400,29 @@ function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 
 
 // ─── Projets tab ─────────────────────────────────────────────────────────────
 
-const PROJET_FORM_EMPTY = { nom: '', emoji: '📁', couleur: PROJET_PALETTE[0], taches: [] };
+const PROJET_FORM_EMPTY = { nom: '', emoji: '📁', couleur: PROJET_PALETTE[0], echeance: '', taches: [] };
+
+// Days remaining until a deadline (null if none). Negative = overdue.
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d = new Date(dateStr + 'T00:00:00');
+  return Math.round((d - today) / 864e5);
+}
+
+function DeadlineChip({ echeance }) {
+  const days = daysUntil(echeance);
+  if (days === null) return null;
+  const overdue = days < 0;
+  const soon = days >= 0 && days <= 3;
+  const color = overdue ? 'var(--red)' : soon ? 'var(--orange)' : 'var(--ink-3)';
+  const label = overdue ? `Retard ${-days}j` : days === 0 ? "Aujourd'hui" : days === 1 ? 'Demain' : `J-${days}`;
+  return (
+    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--surface-2)', color, border: `1px solid var(--line)` }}>
+      ⏳ {label}
+    </span>
+  );
+}
 
 function ProjetTaskRow({ tache, projetCouleur, onModifier, onDejaFait, onSupprimer }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -443,6 +465,9 @@ function ProjetCard({ projet, onEdit, onDelete, onUpdateTaches }) {
 
   const activeTaches = (projet.taches || []).filter(t => t.statut === 'a_faire');
   const doneTaches   = (projet.taches || []).filter(t => t.statut === 'fait' || t.statut === 'deja_fait');
+  const totalTaches  = (projet.taches || []).length;
+  const pct          = totalTaches > 0 ? Math.round((doneTaches.length / totalTaches) * 100) : 0;
+  const complete     = totalTaches > 0 && doneTaches.length === totalTaches;
 
   const addTask = () => {
     if (!newTask.trim()) return;
@@ -480,8 +505,22 @@ function ProjetCard({ projet, onEdit, onDelete, onUpdateTaches }) {
           {projet.emoji}
         </div>
         <div className="flex-1 min-w-0" onClick={() => setExpanded(v => !v)}>
-          <p className="font-semibold text-sm text-gray-800">{projet.nom}</p>
-          <p className="text-xs text-gray-400">{activeTaches.length} tâche{activeTaches.length !== 1 ? 's' : ''} restante{activeTaches.length !== 1 ? 's' : ''}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-sm text-gray-800 truncate">{projet.nom}</p>
+            <DeadlineChip echeance={projet.echeance} />
+          </div>
+          {totalTaches > 0 ? (
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1" style={{ height: 5, borderRadius: 3, background: 'var(--surface-2)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: projet.couleur, transition: 'width 400ms ease' }} />
+              </div>
+              <span className="text-[10px] font-semibold" style={{ color: complete ? 'var(--green)' : 'var(--ink-3)' }}>
+                {complete ? '✓ 100%' : `${pct}%`}
+              </span>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">{activeTaches.length} tâche{activeTaches.length !== 1 ? 's' : ''} restante{activeTaches.length !== 1 ? 's' : ''}</p>
+          )}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           <button onClick={() => setExpanded(v => !v)}
@@ -574,10 +613,10 @@ function ProjetsList({ projets, setProjets }) {
   const save = () => {
     if (!form.nom.trim()) return;
     if (editProjet) {
-      setProjets(prev => prev.map(p => p.id === editProjet.id ? { ...p, nom: form.nom, emoji: form.emoji, couleur: form.couleur } : p));
+      setProjets(prev => prev.map(p => p.id === editProjet.id ? { ...p, nom: form.nom, emoji: form.emoji, couleur: form.couleur, echeance: form.echeance || '' } : p));
     } else {
       const id = Math.max(0, ...(projets || []).map(p => p.id), 0) + 1;
-      setProjets(prev => [...(prev || []), { id, nom: form.nom, emoji: form.emoji, couleur: form.couleur, taches: [] }]);
+      setProjets(prev => [...(prev || []), { id, nom: form.nom, emoji: form.emoji, couleur: form.couleur, echeance: form.echeance || '', taches: [] }]);
     }
     setShowForm(false);
   };
@@ -638,11 +677,18 @@ function ProjetsList({ projets, setProjets }) {
             <input autoFocus value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))}
               placeholder="Ex: Lancement boutique" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           </label>
-          <label>
-            <span className="text-xs text-gray-500 block mb-1">Emoji</span>
-            <input value={form.emoji} onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))}
-              className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-xl text-center" maxLength={2} />
-          </label>
+          <div className="flex gap-3">
+            <label className="flex-shrink-0">
+              <span className="text-xs text-gray-500 block mb-1">Emoji</span>
+              <input value={form.emoji} onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))}
+                className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-xl text-center" maxLength={2} />
+            </label>
+            <label className="flex-1">
+              <span className="text-xs text-gray-500 block mb-1">Échéance (optionnel)</span>
+              <input type="date" value={form.echeance || ''} onChange={e => setForm(f => ({ ...f, echeance: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </label>
+          </div>
           <div>
             <span className="text-xs text-gray-500 block mb-2">Couleur</span>
             <div className="flex gap-3">

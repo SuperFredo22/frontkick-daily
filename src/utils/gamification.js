@@ -12,11 +12,18 @@ import { formatDate } from './date';
 export const XP = {
   mission:   20,  // a mission completed (tâche "fait")
   bonus:     10,  // a bonus action
-  training:  50,  // a training session (sport) — the heavy hitter
+  training:  50,  // a training session with no recorded duration
   priere:     5,  // each prayer
   smokeFree: 15,  // a full smoke-free day
   victoryDay: 25, // bonus for "winning" a day (≥1 mission or training)
 };
+
+// XP for one training session — proportional to effort when a duration was
+// recorded (base 30 + 1 XP/min, capped), else the flat training reward.
+export function sessionXP(sport) {
+  const d = sport?.duree_reelle || 0;
+  return d > 0 ? Math.min(140, 30 + d) : XP.training;
+}
 
 /* ── Level curve ─────────────────────────────────────────────────────
    XP required to GO FROM level n to n+1 grows steadily.
@@ -87,7 +94,7 @@ export function computeStats() {
   const journals = readAllJournals();
 
   let missions = 0, bonus = 0, training = 0, prieres = 0, smokeFreeDays = 0;
-  let trackedDays = 0, victoryDays = 0;
+  let trackedDays = 0, victoryDays = 0, trainingXpTotal = 0;
   const trainingByType = { club: 0, gym: 0, maison: 0, autre: 0 };
 
   for (const j of journals) {
@@ -101,6 +108,7 @@ export function computeStats() {
     const hasTraining = !!(sport || j.habitudes?.sport);
     if (hasTraining) {
       training++;
+      trainingXpTotal += sessionXP(sport);
       const type = sport?.type;
       if (type && trainingByType[type] != null) trainingByType[type]++;
       else trainingByType.autre++;
@@ -113,7 +121,7 @@ export function computeStats() {
   const totalXP =
     missions * XP.mission +
     bonus * XP.bonus +
-    training * XP.training +
+    trainingXpTotal +
     prieres * XP.priere +
     smokeFreeDays * XP.smokeFree +
     victoryDays * XP.victoryDay;
@@ -121,19 +129,46 @@ export function computeStats() {
   return {
     missions, bonus, training, prieres, smokeFreeDays,
     trackedDays, victoryDays, trainingByType, totalXP,
+    weekTraining: trainingThisWeek(),
     ...computeWinStreak(),
   };
 }
 
+// Training sessions logged in the current week (Mon–Sun).
+export function trainingThisWeek() {
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + (day === 0 ? -6 : 1 - day));
+  monday.setHours(0, 0, 0, 0);
+  let count = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    if (d > now) break;
+    let j = null;
+    try { j = JSON.parse(localStorage.getItem(`fk_journal_${formatDate(d)}`)); } catch { /* ignore */ }
+    if (j && (j.sport || j.habitudes?.sport)) count++;
+  }
+  return count;
+}
+
+// Weekly training objective (sessions).
+export const WEEKLY_TRAINING_GOAL = 4;
+
 /* ── Win streak — consecutive "victory days" up to today ─────────────
-   A victory day = ≥1 mission done OR a training session. */
+   A victory day = ≥1 mission done OR a training session OR a day the user
+   protected with a streak-freeze token. */
 export function computeWinStreak() {
+  const frozen = getFrozenDates();
   const get = (d) => {
     try { return JSON.parse(localStorage.getItem(`fk_journal_${formatDate(d)}`)); }
     catch { return null; }
   };
-  const isVictory = (j) =>
-    !!j && ((j.taches || []).some(t => t.statut === 'fait') || j.sport || j.habitudes?.sport);
+  const isVictory = (d) => {
+    if (frozen.has(formatDate(d))) return true;
+    const j = get(d);
+    return !!j && ((j.taches || []).some(t => t.statut === 'fait') || j.sport || j.habitudes?.sport);
+  };
 
   // Current streak (allow today to be still in progress: don't break on an
   // empty *today*, only start counting from the most recent victory).
@@ -142,7 +177,7 @@ export function computeWinStreak() {
   for (let i = 0; i < 730; i++) {
     const d = new Date(start);
     d.setDate(d.getDate() - i);
-    if (isVictory(get(d))) current++;
+    if (isVictory(d)) current++;
     else if (i > 0) break; // today may be empty; yesterday onward must be unbroken
   }
 
@@ -151,11 +186,94 @@ export function computeWinStreak() {
   for (let i = 729; i >= 0; i--) {
     const d = new Date(start);
     d.setDate(d.getDate() - i);
-    if (isVictory(get(d))) { run++; best = Math.max(best, run); }
+    if (isVictory(d)) { run++; best = Math.max(best, run); }
     else run = 0;
   }
 
   return { winStreak: current, bestStreak: Math.max(best, current) };
+}
+
+/* ── Daily ritual ────────────────────────────────────────────────────── */
+
+// XP earned on a single day, from that day's journal object.
+export function dayXP(journal) {
+  if (!journal) return 0;
+  const missions = (journal.taches || []).filter(t => t.statut === 'fait').length;
+  const bonus = (journal.bonus || []).length;
+  const hasTraining = !!(journal.sport || journal.habitudes?.sport);
+  const trainingXp = hasTraining ? sessionXP(journal.sport) : 0;
+  const prieres = journal.habitudes?.prieres || 0;
+  const smokeFree = (journal.habitudes?.cigarettes || 0) === 0 ? 1 : 0;
+  const victory = (missions > 0 || hasTraining) ? 1 : 0;
+  return missions * XP.mission + bonus * XP.bonus + trainingXp +
+    prieres * XP.priere + smokeFree * XP.smokeFree + victory * XP.victoryDay;
+}
+
+// Daily XP objective — scales gently with level so it stays meaningful.
+export function dailyGoal(level = 1) {
+  return 60 + Math.min(60, (level - 1) * 5); // 60 → caps at 120
+}
+
+/* ── Streak-freeze tokens ("protège-série") ──────────────────────────
+   Earn 1 token every 5 levels. Spend a token to mark a missed day as a
+   victory so the streak survives. Frozen dates persist in localStorage. */
+const FREEZE_KEY = 'fk_streak_freezes';
+
+export function getFrozenDates() {
+  try { return new Set(JSON.parse(localStorage.getItem(FREEZE_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+
+export function freezeTokens(level) {
+  const earned = Math.floor(level / 5);
+  const used = getFrozenDates().size;
+  return { earned, used, available: Math.max(0, earned - used) };
+}
+
+// Protect a specific date (defaults to yesterday) if a token is available.
+export function protectStreak(level, dateStr) {
+  const { available } = freezeTokens(level);
+  if (available <= 0) return false;
+  const target = dateStr || formatDate(new Date(Date.now() - 864e5));
+  const frozen = getFrozenDates();
+  if (frozen.has(target)) return false;
+  frozen.add(target);
+  try { localStorage.setItem(FREEZE_KEY, JSON.stringify([...frozen])); } catch { /* ignore */ }
+  return true;
+}
+
+// Was yesterday a "miss" (no activity, not already frozen)? Used to offer
+// the protect action.
+export function yesterdayMissed() {
+  const y = new Date(Date.now() - 864e5);
+  const ds = formatDate(y);
+  if (getFrozenDates().has(ds)) return false;
+  let j = null;
+  try { j = JSON.parse(localStorage.getItem(`fk_journal_${ds}`)); } catch { /* ignore */ }
+  const victory = !!j && ((j.taches || []).some(t => t.statut === 'fait') || j.sport || j.habitudes?.sport);
+  return !victory;
+}
+
+/* ── Mantras de combat ──────────────────────────────────────────────── */
+export const MANTRAS = [
+  'La discipline pèse des grammes, le regret pèse des tonnes.',
+  'On ne monte pas sur le ring pour espérer. On monte pour gagner.',
+  'Chaque répétition forge le combattant.',
+  'Le champion s\'entraîne quand personne ne regarde.',
+  'La douleur est temporaire. L\'abandon est définitif.',
+  'Gagne la journée, gagne le combat.',
+  'Ton seul adversaire, c\'est toi d\'hier.',
+  'Les excuses ne font pas de KO.',
+  'Frappe d\'abord la procrastination.',
+  'Un round à la fois. Reste debout.',
+  'La constance bat le talent qui ne travaille pas.',
+  'Transforme la sueur d\'aujourd\'hui en victoire de demain.',
+];
+
+export function mantraOfTheDay() {
+  const start = new Date(new Date().getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((Date.now() - start) / 864e5);
+  return MANTRAS[dayOfYear % MANTRAS.length];
 }
 
 /* ── Badges ──────────────────────────────────────────────────────────
@@ -201,5 +319,7 @@ export function getProgression() {
     rank,
     badges,
     badgesUnlocked: badges.filter(b => b.unlocked).length,
+    tokens: freezeTokens(lvl.level),
+    goal: dailyGoal(lvl.level),
   };
 }

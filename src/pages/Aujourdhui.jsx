@@ -7,10 +7,12 @@ import { useProjets, getNextProjetTask, getActiveProjects } from '../hooks/usePr
 import { useAgenda } from '../hooks/useAgenda';
 import { getConsecutiveNoSportDays } from '../utils/stats';
 import { useProgression } from '../hooks/useProgression';
-import { XP } from '../utils/gamification';
+import { XP, dayXP, mantraOfTheDay, yesterdayMissed, protectStreak } from '../utils/gamification';
 import { newlyUnlockedByLevel } from '../utils/unlockables';
 import SuggestionCard from '../components/SuggestionCard';
 import HUD from '../components/HUD';
+import DailyObjective from '../components/DailyObjective';
+import FocusOverlay from '../components/FocusOverlay';
 import { XpFlash, LevelUpOverlay } from '../components/RewardFx';
 import Card from '../components/Card';
 import SportModule from '../components/sport/SportModule';
@@ -103,6 +105,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const [levelUp, setLevelUp] = useState(null);
   const prevLevelRef = useRef(prog.level);
   const flashXp = (amount) => setXpFlash(f => ({ amount, trigger: f.trigger + 1 }));
+  const [focusOpen, setFocusOpen] = useState(false);
   useEffect(() => {
     if (prog.level > prevLevelRef.current) {
       setLevelUp({
@@ -397,8 +400,16 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
 
       {/* ── Combatant HUD ─────────────────────────────────────────────── */}
       {!isYesterday && (
-        <div className="px-4 mb-1">
+        <div className="px-4 mb-1 flex flex-col gap-3">
           <HUD prog={prog} onOpen={() => onNavigate?.('stats')} />
+          <DailyObjective
+            todayXP={dayXP(journal)}
+            goal={prog.goal}
+            mantra={mantraOfTheDay()}
+            tokens={prog.tokens}
+            yesterdayMissed={yesterdayMissed()}
+            onProtect={() => { protectStreak(prog.level); refreshProg(); }}
+          />
         </div>
       )}
 
@@ -418,9 +429,9 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
         </div>
       )}
 
-      {/* ── Entraînement strip ─────────────────────────────────────────── */}
+      {/* ── Disciplines strip ──────────────────────────────────────────── */}
       <p className="uppercase tracking-widest text-[11px] font-bold px-5 mt-5 mb-2" style={{ color: 'var(--ink-3)' }}>
-        Entraînement
+        Disciplines du jour
       </p>
       <div
         className="flex gap-2 px-5 pb-1"
@@ -521,6 +532,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
             onReporte={() => handleSuggestionReporte(hero)}
             onAutre={(_, texte) => handleSuggestionAutre(hero, texte)}
             onSuivante={() => handleSuggestionSuivante(hero)}
+            onFocus={() => setFocusOpen(true)}
           />
         ) : (
           <div className="text-center py-8">
@@ -816,6 +828,21 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           </button>
         </div>
       </Modal>
+
+      {/* ── Mode Focus ─────────────────────────────────────────────────── */}
+      {focusOpen && hero && (
+        <FocusOverlay
+          label={hero.banque === 'projet' ? hero.item.description : makeItemLabel(hero.banque, hero.item)}
+          color={hero.banque === 'projet' ? (hero.projet?.couleur || 'var(--red)') : (BANQUE_COLOR[hero.banque] || 'var(--red)')}
+          onComplete={() => {
+            setFocusOpen(false);
+            handleSuggestionFait(hero, null);
+            // Focus bonus, logged as a bonus mission (+10 XP via the engine)
+            setJournal(prev => ({ ...prev, bonus: [...(prev.bonus || []), { id: Date.now(), texte: '🎯 Session focus' }] }));
+          }}
+          onClose={() => setFocusOpen(false)}
+        />
+      )}
 
       {/* ── Reward feedback ────────────────────────────────────────────── */}
       <XpFlash

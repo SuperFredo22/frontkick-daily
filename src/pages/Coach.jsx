@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Bot, Send, Key, AlertTriangle, Info, Lightbulb, ShieldAlert, RefreshCw, Bell, BellOff } from 'lucide-react';
 import { analyzeData, buildSystemPrompt } from '../utils/dataAnalyst';
-import { callGemini } from '../utils/gemini';
+import { askCoach } from '../utils/perplexity';
 import { getNotificationStatus, subscribeToNotifications, unsubscribeFromNotifications } from '../utils/notifications';
 import { formatDate } from '../utils/date';
 
@@ -285,7 +285,7 @@ export default function Coach() {
     setLoading(true);
 
     try {
-      const reply = await callGemini(apiKey, systemPrompt, chatHistory, text.trim());
+      const reply = await askCoach(apiKey, systemPrompt, chatHistory, text.trim());
       setMessages(prev => {
         const isFirstAI = prev.filter(m => m.role === 'model').length === 0;
         if (isFirstAI) saveBilan(reply);
