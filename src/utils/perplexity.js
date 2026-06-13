@@ -1,4 +1,4 @@
-export async function callGemini(apiKey, systemPrompt, history, userMessage) {
+export async function askCoach(apiKey, systemPrompt, history, userMessage) {
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

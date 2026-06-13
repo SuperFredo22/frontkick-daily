@@ -24,7 +24,7 @@ function getSub(banque, item, config) {
 }
 
 export default function SuggestionCard({
-  banque, item, onFait, onReporte, onAutre, onSuivante,
+  banque, item, onFait, onReporte, onAutre, onSuivante, onFocus,
   config: configOverride, exhaustedToday,
   hero = false, fadingOut = false,
 }) {
@@ -209,6 +209,17 @@ export default function SuggestionCard({
             <span>⚔ Mission accomplie</span>
             <span style={{ fontSize: 12, fontWeight: 800, background: 'rgba(255,255,255,0.22)', padding: '2px 7px', borderRadius: 999 }}>+20 XP</span>
           </button>
+
+          {/* Focus mode */}
+          {onFocus && (
+            <button
+              onClick={() => onFocus(item)}
+              className="w-full btn-press flex items-center justify-center gap-2"
+              style={{ padding: '11px', borderRadius: 12, marginBottom: 10, background: 'var(--surface-3)', border: '1px solid var(--line)', color: 'var(--ink)', fontSize: 13.5, fontWeight: 600 }}
+            >
+              ◎ Mode Focus <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>· chrono + bonus XP</span>
+            </button>
+          )}
 
           {/* Secondary actions */}
           <div className="flex gap-2">

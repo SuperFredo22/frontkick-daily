@@ -6,6 +6,7 @@ import { getMonthStats, getLast30DaysStats, getCigaretteFreeDays, getJournalForD
 import { useProgression } from '../hooks/useProgression';
 import { useCosmetics } from '../hooks/useCosmetics';
 import { computeUnlocks } from '../utils/unlockables';
+import { WEEKLY_TRAINING_GOAL } from '../utils/gamification';
 import { Check, Lock as LockIcon, Palette, BadgeCheck } from 'lucide-react';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
@@ -300,6 +301,26 @@ export default function Stats() {
           <div className="text-sm" style={{ color: 'var(--ink-2)' }}>jours sans cigarette sur les 30 derniers</div>
         </div>
       </Card>
+
+      {/* Objectif hebdo d'entraînement */}
+      <section>
+        <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--ink-3)' }}>Objectif d'entraînement — cette semaine</h2>
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-display font-bold" style={{ fontSize: 16, color: 'var(--ink)' }}>
+              {prog.weekTraining} / {WEEKLY_TRAINING_GOAL} séances
+            </span>
+            <span className="text-xs font-semibold" style={{ color: prog.weekTraining >= WEEKLY_TRAINING_GOAL ? 'var(--green)' : 'var(--cyan)' }}>
+              {prog.weekTraining >= WEEKLY_TRAINING_GOAL ? '✓ Objectif atteint' : `${WEEKLY_TRAINING_GOAL - prog.weekTraining} restante${WEEKLY_TRAINING_GOAL - prog.weekTraining > 1 ? 's' : ''}`}
+            </span>
+          </div>
+          <div className="flex gap-1.5">
+            {Array.from({ length: WEEKLY_TRAINING_GOAL }).map((_, i) => (
+              <div key={i} className="flex-1" style={{ height: 8, borderRadius: 4, background: i < prog.weekTraining ? 'var(--cyan)' : 'var(--surface-2)', border: '1px solid var(--line)' }} />
+            ))}
+          </div>
+        </Card>
+      </section>
 
       {/* Entraînement ce mois-ci */}
       <section>
