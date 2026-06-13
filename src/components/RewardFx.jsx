@@ -45,7 +45,7 @@ export function XpFlash({ amount, trigger, onDone }) {
 /**
  * Full-screen level-up celebration. Renders only when `level` is set.
  */
-export function LevelUpOverlay({ level, rank, onClose }) {
+export function LevelUpOverlay({ level, rank, unlocks = [], onClose }) {
   if (level == null) return null;
   return (
     <div
@@ -67,6 +67,25 @@ export function LevelUpOverlay({ level, rank, onClose }) {
           <Shield size={15} style={{ color: rank?.color || 'var(--violet)' }} />
           <span className="font-display" style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink-2)' }}>Grade : {rank?.name}</span>
         </div>
+
+        {unlocks.length > 0 && (
+          <div className="mt-5 flex flex-col gap-2" style={{ position: 'relative' }}>
+            <p className="font-display" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--orange)' }}>
+              🎁 DÉBLOCAGE
+            </p>
+            {unlocks.map((u, i) => (
+              <div key={i} className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+                {u.swatch && (
+                  <span style={{ width: 26, height: 16, borderRadius: 5, background: `linear-gradient(135deg, ${u.swatch[0]}, ${u.swatch[1]})` }} />
+                )}
+                <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{u.kind}</span>
+                <span className="font-display" style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{u.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <button
           onClick={onClose}
           className="btn-press mt-7 px-8 py-3 rounded-2xl font-bold"
