@@ -7,8 +7,10 @@ import { useProjets, getNextProjetTask, getActiveProjects } from '../hooks/usePr
 import { useAgenda } from '../hooks/useAgenda';
 import { getConsecutiveNoSportDays } from '../utils/stats';
 import { useProgression } from '../hooks/useProgression';
+import { XP } from '../utils/gamification';
 import SuggestionCard from '../components/SuggestionCard';
 import HUD from '../components/HUD';
+import { XpFlash, LevelUpOverlay } from '../components/RewardFx';
 import Card from '../components/Card';
 import SportModule from '../components/sport/SportModule';
 import Modal from '../components/Modal';
@@ -94,6 +96,16 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   // XP bar and streak react instantly to completing a mission.
   const [prog, refreshProg] = useProgression();
   useEffect(() => { refreshProg(); }, [journal, projets, reporte, refreshProg]);
+
+  // Reward feedback: "+XP" flash + level-up overlay.
+  const [xpFlash, setXpFlash] = useState({ amount: 0, trigger: 0 });
+  const [levelUp, setLevelUp] = useState(null);
+  const prevLevelRef = useRef(prog.level);
+  const flashXp = (amount) => setXpFlash(f => ({ amount, trigger: f.trigger + 1 }));
+  useEffect(() => {
+    if (prog.level > prevLevelRef.current) setLevelUp({ level: prog.level, rank: prog.rank });
+    prevLevelRef.current = prog.level;
+  }, [prog.level, prog.rank]);
 
   const [bonusInput, setBonusInput] = useState('');
   const [showBonusInput, setShowBonusInput] = useState(false);
@@ -212,6 +224,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const handleSuggestionFait = (suggestion, timeSlot) => {
     if (suggestion.banque === 'projet') handleProjetFait(suggestion.projet, suggestion.item, timeSlot);
     else handleFait(suggestion.banque, suggestion.item, timeSlot);
+    flashXp(XP.mission);
   };
 
   const handleSuggestionReporte = (suggestion) => {
@@ -247,6 +260,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       habitudes: { ...(prev.habitudes || {}), sport: true },
     }));
     setShowSportSheet(false);
+    flashXp(XP.training);
   };
 
   const handleSportClear = () => {
@@ -264,6 +278,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     setJournal(prev => ({ ...prev, bonus: [...(prev.bonus || []), { id: Date.now(), texte: bonusInput.trim() }] }));
     setBonusInput('');
     setShowBonusInput(false);
+    flashXp(XP.bonus);
   };
 
   const removeBonus = (id) => {
@@ -794,6 +809,18 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           </button>
         </div>
       </Modal>
+
+      {/* ── Reward feedback ────────────────────────────────────────────── */}
+      <XpFlash
+        amount={xpFlash.amount}
+        trigger={xpFlash.trigger}
+        onDone={() => setXpFlash(f => ({ ...f, trigger: 0 }))}
+      />
+      <LevelUpOverlay
+        level={levelUp?.level}
+        rank={levelUp?.rank}
+        onClose={() => setLevelUp(null)}
+      />
     </div>
   );
 }

@@ -12,7 +12,8 @@ export function useProgression() {
   const refresh = useCallback(() => setProg(getProgression()), []);
 
   useEffect(() => {
-    refresh();
+    // Initial value is already seeded by useState(getProgression); here we only
+    // subscribe to changes (tab focus + localStorage writes).
     const onFocus = () => refresh();
     const onStorage = (e) => {
       if (!e.key || e.key.startsWith('fk_journal_') || e.key.startsWith('fk_')) refresh();

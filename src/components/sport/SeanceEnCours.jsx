@@ -184,58 +184,61 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
     i < doneThisEx ? '█' : '░'
   ).join('');
 
+  // Reusable dark control style
+  const ctrl = { background: 'var(--surface-2)', border: '1px solid var(--line)' };
+
   // ── UI ────────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-gray-900 flex flex-col z-[9999]">
+    <div className="fixed inset-0 flex flex-col z-[9999]" style={{ background: 'var(--bg)' }}>
 
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 shrink-0">
-        <button onClick={onAbandon} className="text-gray-400 text-sm font-medium py-1 px-2">
+      <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid var(--line)' }}>
+        <button onClick={onAbandon} className="text-sm font-medium py-1 px-2" style={{ color: 'var(--ink-3)' }}>
           ✕ Abandon
         </button>
-        <span className="text-white text-xl font-bold font-mono">{fmt(chrono)}</span>
-        <span className="text-gray-400 text-sm">{doneSeries}/{totalSeries}</span>
+        <span className="text-xl font-bold font-mono" style={{ color: 'var(--ink)' }}>{fmt(chrono)}</span>
+        <span className="text-sm" style={{ color: 'var(--ink-3)' }}>{doneSeries}/{totalSeries}</span>
       </div>
 
       {/* Progress bar */}
-      <div className="h-1 bg-gray-800 shrink-0">
-        <div className="h-1 bg-green-500 transition-all duration-300" style={{ width: `${progress * 100}%` }} />
+      <div className="h-1 shrink-0" style={{ background: 'var(--line)' }}>
+        <div className="h-1 transition-all duration-300" style={{ width: `${progress * 100}%`, background: 'var(--grad-xp)' }} />
       </div>
 
       {/* Body */}
       <div className="flex-1 flex flex-col px-5 pt-6 pb-4 overflow-y-auto">
 
-        <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">
+        <p className="text-xs uppercase tracking-widest mb-2" style={{ color: 'var(--ink-3)' }}>
           Exercice {currentExIdx + 1} / {exercices.length}
-          {isWarmup && <span className="ml-2" style={{ color: '#FBBF24' }}>· Échauffement</span>}
+          {isWarmup && <span className="ml-2" style={{ color: 'var(--orange)' }}>· Échauffement</span>}
         </p>
-        <h2 className="text-2xl font-bold text-white mb-1 leading-tight">{ex.nom}</h2>
-        <p className="text-sm text-gray-400 mb-5">
+        <h2 className="text-2xl font-bold font-display mb-1 leading-tight" style={{ color: 'var(--ink)' }}>{ex.nom}</h2>
+        <p className="text-sm mb-5" style={{ color: 'var(--ink-2)' }}>
           {ex.series} série{ex.series > 1 ? 's' : ''} · {ex.reps}
           {ex.repos > 0 ? ` · repos ${ex.repos}s` : ''}
         </p>
 
         {/* Series progress */}
         <div className="mb-5">
-          <p className="font-mono text-2xl text-green-400 tracking-widest mb-1">{progressBlocks}</p>
-          <p className="text-sm text-gray-400">Série {Math.min(doneThisEx + 1, ex.series)}/{ex.series}</p>
+          <p className="font-mono text-2xl tracking-widest mb-1" style={{ color: 'var(--cyan)' }}>{progressBlocks}</p>
+          <p className="text-sm" style={{ color: 'var(--ink-2)' }}>Série {Math.min(doneThisEx + 1, ex.series)}/{ex.series}</p>
         </div>
 
         {/* Rest timer */}
         {restTime !== null && (
-          <div className="bg-gray-800 rounded-2xl p-5 text-center mb-5">
-            <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Repos</p>
-            <p className="text-5xl font-bold font-mono text-green-400 mb-3">{fmt(restTime)}</p>
-            <button onClick={clearRest} className="text-xs text-gray-500 underline">Passer</button>
+          <div className="rounded-2xl p-5 text-center mb-5" style={ctrl}>
+            <p className="text-xs uppercase tracking-widest mb-2" style={{ color: 'var(--ink-3)' }}>Repos</p>
+            <p className="text-5xl font-bold font-mono mb-3" style={{ color: 'var(--cyan)' }}>{fmt(restTime)}</p>
+            <button onClick={clearRest} className="text-xs underline" style={{ color: 'var(--ink-3)' }}>Passer</button>
           </div>
         )}
 
         {/* Series chrono */}
         {seriesTimer !== null && (
-          <div className="rounded-2xl p-5 text-center mb-5" style={{ background: '#1e3a5f' }}>
-            <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#60a5fa' }}>Chrono</p>
-            <p className="text-5xl font-bold font-mono mb-3" style={{ color: '#93c5fd' }}>{fmt(seriesTimer)}</p>
-            <button onClick={clearSeriesTimer} className="text-xs underline" style={{ color: '#3b82f6' }}>
+          <div className="rounded-2xl p-5 text-center mb-5" style={{ background: 'var(--violet-soft)', border: '1px solid rgba(124,58,237,0.4)' }}>
+            <p className="text-xs uppercase tracking-widest mb-2" style={{ color: 'var(--violet)' }}>Chrono</p>
+            <p className="text-5xl font-bold font-mono mb-3" style={{ color: 'var(--ink)' }}>{fmt(seriesTimer)}</p>
+            <button onClick={clearSeriesTimer} className="text-xs underline" style={{ color: 'var(--violet)' }}>
               Arrêter
             </button>
           </div>
@@ -249,11 +252,10 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
             <button
               onClick={handleSerieFaite}
               disabled={exComplete}
-              className={`w-full py-4 rounded-2xl font-bold text-base active:scale-95 transition-transform ${
-                exComplete
-                  ? 'bg-gray-700 text-gray-500 cursor-default'
-                  : 'bg-green-500 text-white active:bg-green-600'
-              }`}
+              className="w-full py-4 rounded-2xl font-bold text-base active:scale-95 transition-transform"
+              style={exComplete
+                ? { background: 'var(--surface-3)', color: 'var(--ink-3)', cursor: 'default' }
+                : { background: 'var(--cyan)', color: '#06121A' }}
             >
               {exComplete ? '✅ Exercice terminé' : '✅ Série faite'}
             </button>
@@ -268,8 +270,8 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
                     setShowPicker(p => !p);
                   }
                 }}
-                className="w-full py-2.5 rounded-xl bg-gray-800 font-medium text-sm active:bg-gray-700"
-                style={{ color: '#60a5fa' }}
+                className="w-full py-2.5 rounded-xl font-medium text-sm"
+                style={{ ...ctrl, color: 'var(--violet)' }}
               >
                 {isWarmup && warmupSecs
                   ? `⏱ Lancer l'échauffement · ${fmt(warmupSecs)}`
@@ -280,14 +282,14 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
 
             {/* Timer picker */}
             {showPicker && seriesTimer === null && (
-              <div className="bg-gray-800 rounded-xl p-3">
+              <div className="rounded-xl p-3" style={ctrl}>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {TIMER_PRESETS.map(p => (
                     <button
                       key={p.secs}
                       onClick={() => startSeriesTimer(p.secs)}
-                      className="flex-1 py-2 rounded-lg bg-gray-700 font-medium text-sm active:bg-gray-600"
-                      style={{ color: '#60a5fa', minWidth: 52 }}
+                      className="flex-1 py-2 rounded-lg font-medium text-sm"
+                      style={{ background: 'var(--surface-3)', color: 'var(--violet)', minWidth: 52 }}
                     >
                       {p.label}
                     </button>
@@ -299,14 +301,14 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
                     placeholder="Durée en secondes"
                     value={customSecs}
                     onChange={e => setCustomSecs(e.target.value)}
-                    className="flex-1 rounded-lg px-3 py-2 text-sm text-white"
-                    style={{ background: '#374151', border: 'none', outline: 'none' }}
+                    className="flex-1 rounded-lg px-3 py-2 text-sm"
+                    style={{ background: 'var(--surface-3)', border: 'none', outline: 'none', color: 'var(--ink)' }}
                   />
                   <button
                     onClick={() => { const s = parseInt(customSecs); if (s > 0) startSeriesTimer(s); }}
                     disabled={!customSecs || parseInt(customSecs) <= 0}
-                    className="px-3 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-40"
-                    style={{ background: '#2563eb' }}
+                    className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-40"
+                    style={{ background: 'var(--violet)', color: '#fff' }}
                   >
                     OK
                   </button>
@@ -318,7 +320,8 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
             <button
               onClick={() => goTo(Math.min(exercices.length - 1, currentExIdx + 1))}
               disabled={currentExIdx === exercices.length - 1}
-              className="w-full py-3 rounded-xl bg-gray-800 text-gray-300 font-medium text-sm disabled:opacity-30 active:bg-gray-700"
+              className="w-full py-3 rounded-xl font-medium text-sm disabled:opacity-30"
+              style={{ ...ctrl, color: 'var(--ink-2)' }}
             >
               ⏭️ Passer cet exercice
             </button>
@@ -330,14 +333,16 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
           <button
             onClick={() => goTo(Math.max(0, currentExIdx - 1))}
             disabled={currentExIdx === 0}
-            className="flex-1 py-3 rounded-xl bg-gray-800 text-gray-300 font-medium text-sm disabled:opacity-30 active:bg-gray-700"
+            className="flex-1 py-3 rounded-xl font-medium text-sm disabled:opacity-30"
+            style={{ ...ctrl, color: 'var(--ink-2)' }}
           >
             ◄ Précédent
           </button>
           <button
             onClick={() => goTo(Math.min(exercices.length - 1, currentExIdx + 1))}
             disabled={currentExIdx === exercices.length - 1}
-            className="flex-1 py-3 rounded-xl bg-gray-800 text-gray-300 font-medium text-sm disabled:opacity-30 active:bg-gray-700"
+            className="flex-1 py-3 rounded-xl font-medium text-sm disabled:opacity-30"
+            style={{ ...ctrl, color: 'var(--ink-2)' }}
           >
             Suivant ►
           </button>
@@ -349,7 +354,7 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
         <button
           onClick={handleTerminer}
           className="w-full py-4 rounded-2xl font-bold text-white text-base active:opacity-90"
-          style={{ background: 'var(--green)' }}
+          style={{ background: 'var(--grad-fire)' }}
         >
           💪 Terminer la séance
         </button>

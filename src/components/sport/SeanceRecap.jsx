@@ -27,12 +27,12 @@ export default function SeanceRecap({ open, seance, data, onSave, onClose }) {
     <Modal
       open={open}
       onClose={onClose}
-      title="Bien joué 💪"
+      title="Victoire 💪"
       footer={
         <button
           onClick={handleSave}
-          className="w-full py-2.5 rounded-lg text-white font-medium text-sm"
-          style={{ background: 'var(--green)' }}
+          className="w-full py-2.5 rounded-lg text-white font-bold text-sm"
+          style={{ background: 'var(--grad-fire)' }}
         >
           Enregistrer
         </button>
@@ -40,22 +40,29 @@ export default function SeanceRecap({ open, seance, data, onSave, onClose }) {
     >
       <div className="flex flex-col gap-4">
         {seance && (
-          <p className="text-sm font-semibold text-gray-700">{seance.nom}</p>
+          <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{seance.nom}</p>
         )}
+
+        {/* XP reward */}
+        <div className="reward-pop flex items-center justify-center gap-2 py-3 rounded-xl"
+          style={{ background: 'var(--grad-rank)', boxShadow: 'var(--glow-violet)' }}>
+          <span className="text-lg">⚔️</span>
+          <span className="font-display font-bold text-base text-white">Entraînement bouclé · +50 XP</span>
+        </div>
 
         {/* Stats */}
         <div className="flex gap-2">
-          <div className="flex-1 bg-green-50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-green-600">{duree_reelle}</p>
-            <p className="text-xs text-gray-500 mt-0.5">min</p>
+          <div className="flex-1 rounded-xl p-3 text-center" style={{ background: 'var(--cyan-soft)', border: '1px solid rgba(0,180,216,0.3)' }}>
+            <p className="text-2xl font-bold font-display" style={{ color: 'var(--cyan)' }}>{duree_reelle}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>min</p>
           </div>
-          <div className="flex-1 bg-gray-50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-gray-700">{pct}%</p>
-            <p className="text-xs text-gray-500 mt-0.5">séries</p>
+          <div className="flex-1 rounded-xl p-3 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+            <p className="text-2xl font-bold font-display" style={{ color: 'var(--ink)' }}>{pct}%</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>séries</p>
           </div>
-          <div className="flex-1 bg-gray-50 rounded-xl p-3 text-center">
-            <p className="text-xl font-bold text-gray-700">{exercices_completes}/{exercices_totaux}</p>
-            <p className="text-xs text-gray-500 mt-0.5">exercices</p>
+          <div className="flex-1 rounded-xl p-3 text-center" style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+            <p className="text-xl font-bold font-display" style={{ color: 'var(--ink)' }}>{exercices_completes}/{exercices_totaux}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>exercices</p>
           </div>
         </div>
 
