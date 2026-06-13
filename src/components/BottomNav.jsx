@@ -1,21 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sun, Calendar, BarChart3, FolderOpen, Plus, Bot } from 'lucide-react';
+import { Swords, Calendar, TrendingUp, FolderOpen, Plus, Bot } from 'lucide-react';
 
 const TABS = [
-  { id: 'today',   label: "Aujourd'hui", Icon: Sun },
-  { id: 'agenda',  label: 'Agenda',       Icon: Calendar },
-  { id: 'stats',   label: 'Stats',        Icon: BarChart3 },
-  { id: 'compose', label: 'Ajouter',      Icon: Plus },
-  { id: 'banques', label: 'Banques',      Icon: FolderOpen },
+  { id: 'today',   label: 'Combat',      Icon: Swords },
+  { id: 'agenda',  label: 'Agenda',      Icon: Calendar },
+  { id: 'stats',   label: 'Progression', Icon: TrendingUp },
+  { id: 'compose', label: 'Ajouter',     Icon: Plus },
+  { id: 'banques', label: 'Arsenal',     Icon: FolderOpen },
 ];
 
 const COMPOSE_OPTIONS = [
-  { id: 'tiktok',     emoji: '🎬', label: 'Idée TikTok',      color: 'var(--red)' },
-  { id: 'fightfocus', emoji: '🎯', label: 'Tâche FightFocus', color: 'var(--cyan)' },
-  { id: 'marque',     emoji: '👕', label: 'Action Marque',     color: 'var(--orange)' },
+  { id: 'tiktok',     emoji: '🎬', label: 'Idée TikTok',         color: 'var(--red)' },
+  { id: 'fightfocus', emoji: '🎯', label: 'Mission FightFocus',  color: 'var(--cyan)' },
+  { id: 'marque',     emoji: '👕', label: 'Action Marque',       color: 'var(--orange)' },
   { id: 'divider' },
-  { id: 'agenda',     emoji: '📅', label: 'Nouveau RDV',       color: '#0F172A' },
-  { id: 'bonus',      emoji: '⚡', label: 'Tâche bonus',       color: '#0F172A' },
+  { id: 'agenda',     emoji: '📅', label: 'Nouveau RDV',         color: 'var(--surface-3)' },
+  { id: 'bonus',      emoji: '⚡', label: 'Mission bonus',        color: 'var(--violet)' },
 ];
 
 function TabItem({ id, label, Icon, active, onClick }) {
@@ -23,20 +23,20 @@ function TabItem({ id, label, Icon, active, onClick }) {
     <button
       onClick={onClick}
       className="flex-1 flex flex-col items-center gap-0.5 py-2 btn-press"
-      style={{ color: active ? 'var(--red)' : '#9AA3AF' }}
+      style={{ color: active ? 'var(--red)' : 'var(--ink-3)' }}
     >
       <span
         style={{
-          width: 24, height: 24,
+          width: 26, height: 26,
           display: 'grid', placeItems: 'center',
-          borderRadius: 8,
+          borderRadius: 9,
           background: active ? 'var(--red-soft)' : 'transparent',
           transition: 'background 150ms ease-out',
         }}
       >
-        <Icon size={16} strokeWidth={active ? 2.2 : 2} />
+        <Icon size={17} strokeWidth={active ? 2.4 : 2} />
       </span>
-      <span style={{ fontSize: 10, fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.01em' }}>{label}</span>
     </button>
   );
 }
@@ -120,9 +120,9 @@ export default function BottomNav({ current, onChange, onCompose }) {
       <nav
         className="fixed bottom-0 left-0 right-0 z-30"
         style={{
-          background: 'rgba(255,255,255,.95)',
-          backdropFilter: 'blur(18px)',
-          WebkitBackdropFilter: 'blur(18px)',
+          background: 'rgba(11,11,15,.82)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           borderTop: '1px solid var(--line)',
           padding: '8px 0 22px',
           maxWidth: 480,
@@ -152,7 +152,7 @@ export default function BottomNav({ current, onChange, onCompose }) {
             />
           ))}
 
-          {/* FAB — Coach */}
+          {/* FAB — Coach principal */}
           <button
             onClick={() => { setMenuOpen(false); onChange('coach'); }}
             className="absolute btn-press"
@@ -160,21 +160,21 @@ export default function BottomNav({ current, onChange, onCompose }) {
               left: '50%',
               top: -22,
               transform: 'translateX(-50%)',
-              width: 56,
-              height: 56,
+              width: 58,
+              height: 58,
               borderRadius: '50%',
-              background: current === 'coach' ? '#0F172A' : 'var(--red)',
+              background: current === 'coach' ? 'var(--grad-rank)' : 'var(--grad-fire)',
               color: 'white',
               border: '4px solid var(--bg)',
-              boxShadow: 'var(--shadow-fab)',
+              boxShadow: current === 'coach' ? 'var(--glow-violet)' : 'var(--shadow-fab)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'background 200ms ease',
+              transition: 'background 200ms ease, box-shadow 200ms ease',
               zIndex: 1,
             }}
           >
-            <Bot size={24} strokeWidth={2.2} />
+            <Bot size={25} strokeWidth={2.2} />
           </button>
         </div>
       </nav>

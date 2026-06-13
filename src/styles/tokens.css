@@ -1,32 +1,52 @@
 :root {
-  /* Backgrounds */
-  --bg: #FAFAFA;
-  --surface: #FFFFFF;
+  /* ── Surfaces — dark, premium, adult ─────────────────────────────── */
+  --bg:        #0B0B0F;   /* app background — near-black, faint cool undertone */
+  --bg-2:      #101015;   /* secondary background */
+  --surface:   #15151C;   /* cards */
+  --surface-2: #1C1C25;   /* elevated cards / inputs */
+  --surface-3: #25252F;   /* pressed / hover */
 
-  /* Text */
-  --ink: #0F172A;
-  --ink-2: #475569;
-  --ink-3: #94A3B8;
+  /* ── Text ─────────────────────────────────────────────────────────── */
+  --ink:   #F5F5F8;   /* primary */
+  --ink-2: #A6A6B5;   /* secondary */
+  --ink-3: #6A6A78;   /* muted */
 
-  /* Borders */
-  --line: #EEF0F3;
-  --line-2: #F4F5F7;
+  /* ── Lines / borders ──────────────────────────────────────────────── */
+  --line:   rgba(255,255,255,0.09);
+  --line-2: rgba(255,255,255,0.05);
 
-  /* Brand */
-  --red: #C0392B;
-  --red-soft: #FDECEA;
-  --red-50: #FEF5F4;
+  /* ── Combat palette ───────────────────────────────────────────────── */
+  --red:    #FF5757;   /* strike / primary action */
+  --orange: #FF9F1C;   /* energy / streak */
+  --violet: #7C3AED;   /* rank / mastery */
+  --cyan:   #00B4D8;   /* focus / info */
+  --green:  #2ED47A;   /* victory / done */
 
-  /* Categories */
-  --cyan: #00B4D8;
-  --cyan-soft: #E0F7FB;
-  --orange: #E67E22;
-  --orange-soft: #FDEFE0;
-  --green: #16A34A;
-  --green-soft: #DCFCE7;
+  /* Tints (low-alpha, for chips & soft backgrounds on dark) */
+  --red-soft:    rgba(255,87,87,0.14);
+  --red-50:      rgba(255,87,87,0.10);
+  --orange-soft: rgba(255,159,28,0.14);
+  --violet-soft: rgba(124,58,237,0.16);
+  --cyan-soft:   rgba(0,180,216,0.14);
+  --green-soft:  rgba(46,212,122,0.14);
 
-  /* Shadows */
-  --shadow-card: 0 1px 3px rgba(15,23,42,.05), 0 1px 2px rgba(15,23,42,.03);
-  --shadow-lift: 0 8px 24px -8px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.04);
-  --shadow-fab: 0 8px 20px -4px rgba(192,57,43,.45), 0 4px 8px -2px rgba(192,57,43,.25);
+  /* ── Gradients ────────────────────────────────────────────────────── */
+  --grad-fire:  linear-gradient(135deg, #FF5757 0%, #FF9F1C 100%);
+  --grad-rank:  linear-gradient(135deg, #7C3AED 0%, #FF5757 100%);
+  --grad-focus: linear-gradient(135deg, #00B4D8 0%, #7C3AED 100%);
+  --grad-xp:    linear-gradient(90deg, #FF9F1C 0%, #FF5757 100%);
+  --grad-surface: linear-gradient(165deg, #1C1C25 0%, #15151C 100%);
+
+  /* ── Elevation (dark — shadow + subtle ring) ──────────────────────── */
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px -12px rgba(0,0,0,0.7);
+  --shadow-lift: 0 1px 0 rgba(255,255,255,0.04) inset, 0 18px 40px -16px rgba(0,0,0,0.75);
+  --shadow-fab:  0 10px 30px -6px rgba(255,87,87,0.5), 0 4px 12px -2px rgba(255,87,87,0.35);
+  --glow-red:    0 0 0 1px rgba(255,87,87,0.35), 0 0 24px -4px rgba(255,87,87,0.45);
+  --glow-violet: 0 0 0 1px rgba(124,58,237,0.4), 0 0 24px -4px rgba(124,58,237,0.5);
+  --glow-orange: 0 0 0 1px rgba(255,159,28,0.4), 0 0 22px -6px rgba(255,159,28,0.5);
+
+  /* Legacy aliases (kept so untouched code stays sane) */
+  --red-kick:    #FF5757;
+  --cyan-fight:  #00B4D8;
+  --orange-marque: #FF9F1C;
 }

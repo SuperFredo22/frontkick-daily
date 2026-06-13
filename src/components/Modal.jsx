@@ -13,9 +13,9 @@ export default function Modal({ open, onClose, title, children, footer }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
         {title && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <h3 className="font-semibold text-base text-text-primary">{title}</h3>
-            <button onClick={onClose} className="text-gray-400 text-xl leading-none p-1">✕</button>
+          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--line)' }}>
+            <h3 className="font-display font-bold text-base" style={{ color: 'var(--ink)' }}>{title}</h3>
+            <button onClick={onClose} className="text-xl leading-none p-1" style={{ color: 'var(--ink-3)' }}>✕</button>
           </div>
         )}
         <div className="modal-body">{children}</div>

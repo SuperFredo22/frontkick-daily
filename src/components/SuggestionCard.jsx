@@ -142,15 +142,20 @@ export default function SuggestionCard({
       <>
         <div
           style={{
-            background: `linear-gradient(165deg, #fff 0%, ${config.bg} 100%)`,
+            background: `linear-gradient(165deg, var(--surface-2) 0%, var(--surface) 100%)`,
+            border: '1px solid var(--line)',
             borderRadius: 22,
             padding: 20,
             boxShadow: 'var(--shadow-lift)',
+            position: 'relative',
+            overflow: 'hidden',
             opacity: fadingOut ? 0 : 1,
             transform: fadingOut ? 'translateY(-8px)' : 'translateY(0)',
             transition: fadingOut ? 'opacity 280ms ease-in, transform 280ms ease-in' : 'opacity 280ms ease-out, transform 280ms ease-out',
           }}
         >
+          {/* Accent edge */}
+          <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: config.color }} />
           {/* Card header */}
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2.5">
@@ -181,7 +186,7 @@ export default function SuggestionCard({
 
           {/* Title */}
           <p
-            className="leading-snug mb-5"
+            className="leading-snug mb-5 font-display"
             style={{ fontSize: 19, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em', lineHeight: 1.3 }}
           >
             {label}
@@ -190,18 +195,19 @@ export default function SuggestionCard({
           {/* Primary action */}
           <button
             onClick={handleFait}
-            className="w-full btn-press"
+            className="w-full btn-press flex items-center justify-center gap-2"
             style={{
               padding: '15px',
               borderRadius: 14,
               background: config.color,
               color: 'white',
               fontSize: 15,
-              fontWeight: 600,
+              fontWeight: 700,
               marginBottom: 10,
             }}
           >
-            ✓ Marquer comme fait
+            <span>⚔ Mission accomplie</span>
+            <span style={{ fontSize: 12, fontWeight: 800, background: 'rgba(255,255,255,0.22)', padding: '2px 7px', borderRadius: 999 }}>+20 XP</span>
           </button>
 
           {/* Secondary actions */}
