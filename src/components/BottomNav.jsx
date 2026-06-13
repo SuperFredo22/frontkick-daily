@@ -120,7 +120,7 @@ export default function BottomNav({ current, onChange, onCompose }) {
       <nav
         className="fixed bottom-0 left-0 right-0 z-30"
         style={{
-          background: 'rgba(255,255,255,.95)',
+          background: 'var(--nav-bg)',
           backdropFilter: 'blur(18px)',
           WebkitBackdropFilter: 'blur(18px)',
           borderTop: '1px solid var(--line)',

@@ -2,6 +2,7 @@
   /* Backgrounds */
   --bg: #FAFAFA;
   --surface: #FFFFFF;
+  --nav-bg: rgba(255,255,255,.95);
 
   /* Text */
   --ink: #0F172A;
@@ -38,6 +39,7 @@
 [data-theme="dark"] {
   --bg: #101418;
   --surface: #1A2026;
+  --nav-bg: rgba(20,26,32,.95);
 
   --ink: #E8EDF2;
   --ink-2: #B3BECA;
