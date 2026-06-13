@@ -12,7 +12,6 @@ const BILANS_KEY      = 'fk_coach_bilans';
 // rester en mémoire plusieurs jours, les constantes seraient figées sur la
 // date d'ouverture.
 const todayStr   = () => formatDate(new Date());
-const sessionKey = () => `fk_coach_session_${todayStr()}`;
 
 function cleanOldSessions() {
   try {
@@ -265,10 +264,14 @@ export default function Coach({ pendingCompose, onPendingConsumed }) {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '');
   // null = en cours de vérification ; true = clé configurée sur Vercel (pas de setup nécessaire)
   const [serverKey, setServerKey] = useState(null);
+  // Date à laquelle appartient la conversation en mémoire. Si la PWA reste
+  // ouverte après minuit, on bascule vers la session du nouveau jour au lieu
+  // d'écrire l'historique de la veille dans la clé du jour courant.
+  const [sessionDate, setSessionDate] = useState(() => todayStr());
   const [messages, setMessages] = useState(() => {
     try {
       cleanOldSessions();
-      const saved = localStorage.getItem(sessionKey());
+      const saved = localStorage.getItem(`fk_coach_session_${todayStr()}`);
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
@@ -285,12 +288,32 @@ export default function Coach({ pendingCompose, onPendingConsumed }) {
     return buildSystemPrompt(analysis) + getBilanContext();
   }, [analysis]);
 
-  // Persist session
+  // Persist session vers la clé de SA date (et non un todayStr() recalculé)
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem(sessionKey(), JSON.stringify(messages));
+      localStorage.setItem(`fk_coach_session_${sessionDate}`, JSON.stringify(messages));
     }
-  }, [messages]);
+  }, [messages, sessionDate]);
+
+  // Bascule de jour : au retour au premier plan, si la date a changé, on
+  // recharge la conversation du nouveau jour (vide → le bilan du jour réapparaît)
+  useEffect(() => {
+    const checkRollover = () => {
+      const now = todayStr();
+      if (now === sessionDate) return;
+      setSessionDate(now);
+      try {
+        const saved = localStorage.getItem(`fk_coach_session_${now}`);
+        setMessages(saved ? JSON.parse(saved) : []);
+      } catch { setMessages([]); }
+    };
+    document.addEventListener('visibilitychange', checkRollover);
+    window.addEventListener('focus', checkRollover);
+    return () => {
+      document.removeEventListener('visibilitychange', checkRollover);
+      window.removeEventListener('focus', checkRollover);
+    };
+  }, [sessionDate]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -357,7 +380,7 @@ export default function Coach({ pendingCompose, onPendingConsumed }) {
             onClick={() => {
               if (window.confirm('Effacer la clé API et réinitialiser le coach ?')) {
                 localStorage.removeItem(API_KEY_STORAGE);
-                localStorage.removeItem(sessionKey());
+                localStorage.removeItem(`fk_coach_session_${sessionDate}`);
                 setApiKey('');
                 setMessages([]);
               }

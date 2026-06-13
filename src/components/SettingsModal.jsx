@@ -49,10 +49,12 @@ export default function SettingsModal({ open, onClose }) {
     setThemePref(id);
   };
 
+  const backupConfigured = !!import.meta.env.VITE_BACKUP_SECRET;
+
   const handleAutoBackupToggle = async () => {
     const next = !autoBackup;
     setAutoBackup(next);
-    if (next) {
+    if (next && backupConfigured) {
       setSyncing(true);
       await syncBackup({ force: true });
       setSyncing(false);
@@ -166,8 +168,13 @@ export default function SettingsModal({ open, onClose }) {
             Active aussi les <strong>notifications intelligentes</strong> : les rappels déjà accomplis ne sont plus envoyés.
             La clé API et le code PIN ne sont jamais envoyés.
           </p>
+          {autoBackup && !backupConfigured && (
+            <p className="text-xs mt-1.5 font-medium" style={{ color: 'var(--orange)' }}>
+              ⚠️ Configure les variables BACKUP_SECRET (Vercel) et VITE_BACKUP_SECRET (build) pour activer la sauvegarde.
+            </p>
+          )}
           {syncing && <p className="text-xs mt-1.5 font-medium" style={{ color: 'var(--ink-2)' }}>Synchronisation…</p>}
-          {!syncing && lastBackupDays !== null && (
+          {!syncing && backupConfigured && lastBackupDays !== null && (
             <p className="text-xs mt-1.5 font-medium" style={{ color: 'var(--ink-2)' }}>
               Dernière sauvegarde : {lastBackupDays === 0 ? "aujourd'hui" : `il y a ${lastBackupDays} jour${lastBackupDays > 1 ? 's' : ''}`}
             </p>

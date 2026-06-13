@@ -34,6 +34,8 @@ npm run lint      # eslint
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob (souscriptions push + backups) |
 | `CRON_SECRET` | Doit correspondre au secret GitHub Actions du même nom |
 | `PERPLEXITY_API_KEY` | Optionnelle — clé du coach IA côté serveur (sinon saisie dans l'app) |
+| `BACKUP_SECRET` | Secret partagé protégeant `/api/backup` (sauvegarde auto) |
+| `VITE_BACKUP_SECRET` | Même valeur que `BACKUP_SECRET`, embarquée au build côté client |
 
 ## Architecture des données (localStorage)
 

@@ -6,8 +6,26 @@ import { put } from '@vercel/blob';
 // - full  : export complet des données (hors clés sensibles, filtrées côté
 //   client) → filet de sécurité contre la perte du localStorage.
 //   Rotation par jour de la semaine = 7 sauvegardes glissantes.
+//
+// Authentification : secret partagé (BACKUP_SECRET côté serveur, embarqué dans
+// le client via VITE_BACKUP_SECRET). Accepté en en-tête `x-backup-secret`
+// (requêtes fetch) ou dans le corps `secret` (navigator.sendBeacon ne peut pas
+// poser d'en-tête). Sans cette protection, n'importe qui connaissant l'URL
+// pourrait écraser l'état des notifications ou corrompre les sauvegardes.
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+
+  const expected = process.env.BACKUP_SECRET;
+  if (!expected) {
+    return res.status(503).json({
+      error: 'BACKUP_SECRET non configuré sur le serveur — sauvegarde en ligne indisponible',
+    });
+  }
+
+  const provided = req.headers['x-backup-secret'] || req.body?.secret;
+  if (provided !== expected) {
+    return res.status(401).json({ error: 'Non autorisé' });
+  }
 
   try {
     const { state, full } = req.body || {};

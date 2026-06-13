@@ -5,11 +5,14 @@ import { formatDate } from './date';
 // Clés à ne jamais envoyer en ligne
 const SENSITIVE_KEYS = ['fk_perplexity_key', 'fk_pin'];
 
+// Secret partagé embarqué au build (doit correspondre à BACKUP_SECRET sur Vercel)
+const BACKUP_SECRET = import.meta.env.VITE_BACKUP_SECRET || '';
+
 const THROTTLE_MS = 5 * 60 * 1000;
 let lastSync = 0;
 
 export function isAutoBackupEnabled() {
-  return getStorage('autobackup') === true;
+  return getStorage('autobackup') === true && !!BACKUP_SECRET;
 }
 
 function buildPayload() {
@@ -24,7 +27,7 @@ function buildPayload() {
   };
   const full = collectData();
   SENSITIVE_KEYS.forEach(k => delete full[k]);
-  return { state, full };
+  return { state, full, secret: BACKUP_SECRET };
 }
 
 function markSynced() {
@@ -39,7 +42,7 @@ export async function syncBackup({ force = false } = {}) {
   try {
     const res = await fetch('/api/backup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-backup-secret': BACKUP_SECRET },
       body: JSON.stringify(buildPayload()),
     });
     if (res.ok) { markSynced(); return true; }
