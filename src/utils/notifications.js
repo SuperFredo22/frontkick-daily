@@ -62,8 +62,13 @@ export async function unsubscribeFromNotifications() {
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
   if (sub) {
+    const endpoint = sub.endpoint;
     await sub.unsubscribe();
-    // Supprimer aussi la souscription côté serveur
-    await fetch('/api/subscribe', { method: 'DELETE' }).catch(() => {});
+    // Supprimer la souscription de CET appareil côté serveur (multi-appareils)
+    await fetch('/api/subscribe', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint }),
+    }).catch(() => {});
   }
 }

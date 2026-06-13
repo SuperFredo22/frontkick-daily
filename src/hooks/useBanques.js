@@ -3,7 +3,6 @@ import { tiktokInitial } from '../data/tiktok';
 import { fightfocusInitial } from '../data/fightfocus';
 import { marqueInitial } from '../data/marque';
 
-const INACTIVE_STATUTS = ['publiee', 'fait', 'deja_fait'];
 const ACTIVE_STATUTS = {
   tiktok: ['a_tourner'],
   fightfocus: ['a_faire'],

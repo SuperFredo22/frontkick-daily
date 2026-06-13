@@ -1,5 +1,5 @@
 // Increment CACHE_VERSION on each deploy to force SW update
-const CACHE_VERSION = 'frontkick-v3';
+const CACHE_VERSION = 'frontkick-v4';
 
 // ── Install: pre-cache the shell ─────────────────────────────────────────────
 self.addEventListener('install', (event) => {
@@ -24,25 +24,29 @@ self.addEventListener('activate', (event) => {
 // ── Push notifications ────────────────────────────────────────────────────────
 self.addEventListener('push', (event) => {
   if (!event.data) return;
-  const { title, body } = event.data.json();
+  const { title, body, url } = event.data.json();
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: '/icons/icon.svg',
-      badge: '/icons/icon.svg',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
       vibrate: [200, 100, 200, 100, 200],
       requireInteraction: false,
+      data: { url: url || '/' },
     })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const url = event.notification.data?.url || '/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       const existing = list.find(c => c.url.includes(self.location.origin));
-      if (existing) return existing.focus();
-      return clients.openWindow('/');
+      if (existing) {
+        return existing.focus().then(() => existing.navigate(url)).catch(() => existing.focus());
+      }
+      return clients.openWindow(url);
     })
   );
 });

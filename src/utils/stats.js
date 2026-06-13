@@ -1,5 +1,5 @@
 import { getStorage } from '../hooks/useStorage';
-import { formatDate, getLast30Days, getMonthStart } from './date';
+import { formatDate, getLast30Days, getMonthStart, startOfWeek } from './date';
 
 export function getJournalForDate(dateStr) {
   return getStorage(`journal_${dateStr}`) || null;
@@ -127,6 +127,49 @@ export function computeSportStreak() {
     else if (i > 0) break;
   }
   return streak;
+}
+
+// Progression de la semaine en cours (lundi → aujourd'hui) pour les objectifs hebdo
+export function getWeekProgress() {
+  const start = startOfWeek(new Date());
+  const today = new Date();
+  const progress = { sport: 0, tiktok: 0, fightfocus: 0, marque: 0 };
+
+  const d = new Date(start);
+  while (d <= today) {
+    const journal = getJournalForDate(formatDate(d));
+    if (journal?.sport || journal?.habitudes?.sport) progress.sport++;
+    (journal?.taches || []).forEach(t => {
+      if (t.statut === 'fait' && progress[t.banque] !== undefined && t.banque !== 'sport') {
+        progress[t.banque]++;
+      }
+    });
+    d.setDate(d.getDate() + 1);
+  }
+  return progress;
+}
+
+// Données pour la heatmap type GitHub : `weeks` semaines complètes
+// terminant la semaine courante. Niveau 0-4 selon le nombre de tâches faites.
+export function getHeatmapData(weeks = 12) {
+  const end = new Date();
+  const start = startOfWeek(new Date());
+  start.setDate(start.getDate() - (weeks - 1) * 7);
+
+  const days = [];
+  const d = new Date(start);
+  while (d <= end) {
+    const dateStr = formatDate(d);
+    const journal = getJournalForDate(dateStr);
+    const taches = (journal?.taches || []).filter(t => t.statut === 'fait').length
+      + (journal?.bonus || []).length;
+    const sport = !!(journal?.sport || journal?.habitudes?.sport);
+    const count = taches + (sport ? 1 : 0);
+    const level = count === 0 ? 0 : count <= 1 ? 1 : count <= 3 ? 2 : count <= 5 ? 3 : 4;
+    days.push({ date: dateStr, count, level, hasData: !!journal });
+    d.setDate(d.getDate() + 1);
+  }
+  return days;
 }
 
 export function getSportLast30Days() {

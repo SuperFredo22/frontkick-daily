@@ -1,17 +1,30 @@
 name: Push Notifications
 
 on:
-  # Horaires en UTC — Paris est UTC+2 en été (mai à oct), UTC+1 en hiver
+  # Les crons GitHub sont en UTC fixe. Pour que les rappels restent à la bonne
+  # heure de Paris été (UTC+2) comme hiver (UTC+1), chaque horaire a deux
+  # déclencheurs (version été + version hiver) et le step "Déterminer le type"
+  # calcule l'heure LOCALE de Paris : seul le déclencheur qui tombe dans la
+  # bonne fenêtre envoie quelque chose, l'autre se termine sans rien faire.
   schedule:
-    - cron: '30 5 * * *'   # 07h30 Paris — Prières du matin
-    - cron: '0 7 * * *'    # 09h00 Paris — Première tâche
-    - cron: '0 10 * * *'   # 12h00 Paris — Bilan midi
-    - cron: '0 12 * * *'   # 14h00 Paris — Focus après-midi
-    - cron: '0 14 * * *'   # 16h00 Paris — Sport
-    - cron: '30 15 * * *'  # 17h30 Paris — Dernière heure productive
-    - cron: '0 17 * * *'   # 19h00 Paris — Contenu & FightFocus
-    - cron: '30 18 * * *'  # 20h30 Paris — Prières du soir
-    - cron: '30 19 * * *'  # 21h30 Paris — Journal
+    - cron: '30 5 * * *'   # 07h30 Paris été  — Prières du matin
+    - cron: '30 6 * * *'   # 07h30 Paris hiver
+    - cron: '0 7 * * *'    # 09h00 Paris été  — Première tâche
+    - cron: '0 8 * * *'    # 09h00 Paris hiver
+    - cron: '0 10 * * *'   # 12h00 Paris été  — Bilan midi
+    - cron: '0 11 * * *'   # 12h00 Paris hiver
+    - cron: '0 12 * * *'   # 14h00 Paris été  — Focus après-midi
+    - cron: '0 13 * * *'   # 14h00 Paris hiver
+    - cron: '0 14 * * *'   # 16h00 Paris été  — Sport
+    - cron: '0 15 * * *'   # 16h00 Paris hiver
+    - cron: '30 15 * * *'  # 17h30 Paris été  — Dernière heure productive
+    - cron: '30 16 * * *'  # 17h30 Paris hiver
+    - cron: '0 16 * * 0'   # 18h00 Paris été  — Bilan hebdo (dimanche)
+    - cron: '0 17 * * *'   # 19h00 Paris été — Contenu / 18h00 hiver dim — Bilan hebdo
+    - cron: '0 18 * * *'   # 19h00 Paris hiver — Contenu
+    - cron: '30 18 * * *'  # 20h30 Paris été  — Prières du soir
+    - cron: '30 19 * * *'  # 20h30 Paris hiver / 21h30 été — Journal
+    - cron: '30 20 * * *'  # 21h30 Paris hiver — Journal
   workflow_dispatch:
     inputs:
       type:
@@ -29,6 +42,7 @@ on:
           - content
           - evening-prayer
           - journal
+          - weekly-review
 
 # Empêche l'annulation involontaire de runs concurrents
 concurrency:
@@ -58,23 +72,28 @@ jobs:
             exit 0
           fi
 
-          # Déclenchement cron → fenêtre ±15 min (GitHub peut être en retard de 1-15 min)
-          TOTAL=$(( $(date -u +%H) * 60 + $(date -u +%M) ))
+          # Heure LOCALE de Paris (gère été/hiver automatiquement)
+          H=$(TZ=Europe/Paris date +%H)
+          M=$(TZ=Europe/Paris date +%M)
+          DOW=$(TZ=Europe/Paris date +%u)   # 1=lundi … 7=dimanche
+          TOTAL=$(( 10#$H * 60 + 10#$M ))
           TYPE=""
 
-          if   [ "$TOTAL" -ge 315 ] && [ "$TOTAL" -le 345 ]; then TYPE="morning-prayer"
-          elif [ "$TOTAL" -ge 405 ] && [ "$TOTAL" -le 435 ]; then TYPE="first-task"
-          elif [ "$TOTAL" -ge 585 ] && [ "$TOTAL" -le 615 ]; then TYPE="midday"
-          elif [ "$TOTAL" -ge 705 ] && [ "$TOTAL" -le 735 ]; then TYPE="afternoon"
-          elif [ "$TOTAL" -ge 825 ] && [ "$TOTAL" -le 855 ]; then TYPE="sport"
-          elif [ "$TOTAL" -ge 915 ] && [ "$TOTAL" -le 945 ]; then TYPE="last-hour"
-          elif [ "$TOTAL" -ge 1005 ] && [ "$TOTAL" -le 1035 ]; then TYPE="content"
-          elif [ "$TOTAL" -ge 1095 ] && [ "$TOTAL" -le 1125 ]; then TYPE="evening-prayer"
-          elif [ "$TOTAL" -ge 1155 ] && [ "$TOTAL" -le 1185 ]; then TYPE="journal"
+          # Fenêtres ±14 min autour de l'heure cible (heure de Paris)
+          if   [ "$DOW" = "7" ] && [ "$TOTAL" -ge 1066 ] && [ "$TOTAL" -le 1094 ]; then TYPE="weekly-review"   # dim 18h00
+          elif [ "$TOTAL" -ge 436 ]  && [ "$TOTAL" -le 464 ];  then TYPE="morning-prayer"   # 07h30
+          elif [ "$TOTAL" -ge 526 ]  && [ "$TOTAL" -le 554 ];  then TYPE="first-task"       # 09h00
+          elif [ "$TOTAL" -ge 706 ]  && [ "$TOTAL" -le 734 ];  then TYPE="midday"           # 12h00
+          elif [ "$TOTAL" -ge 826 ]  && [ "$TOTAL" -le 854 ];  then TYPE="afternoon"        # 14h00
+          elif [ "$TOTAL" -ge 946 ]  && [ "$TOTAL" -le 974 ];  then TYPE="sport"            # 16h00
+          elif [ "$TOTAL" -ge 1036 ] && [ "$TOTAL" -le 1064 ]; then TYPE="last-hour"        # 17h30
+          elif [ "$TOTAL" -ge 1126 ] && [ "$TOTAL" -le 1154 ]; then TYPE="content"          # 19h00
+          elif [ "$TOTAL" -ge 1216 ] && [ "$TOTAL" -le 1244 ]; then TYPE="evening-prayer"   # 20h30
+          elif [ "$TOTAL" -ge 1276 ] && [ "$TOTAL" -le 1304 ]; then TYPE="journal"          # 21h30
           fi
 
           echo "type=$TYPE" >> $GITHUB_OUTPUT
-          echo "Heure UTC: $(date -u +'%H:%M') (total=${TOTAL}min) → type='${TYPE}'"
+          echo "Heure Paris: ${H}:${M} (total=${TOTAL}min, jour=${DOW}) → type='${TYPE}'"
 
       - name: Envoyer la notification
         if: steps.notif.outputs.type != ''
@@ -94,7 +113,7 @@ jobs:
           echo "HTTP $CODE — $BODY"
 
           case "$CODE" in
-            200) echo "✓ Notification '$TYPE' envoyée avec succès" ;;
+            200) echo "✓ Notification '$TYPE' traitée avec succès" ;;
             401) echo "::error::Authentification échouée (401) — vérifie que CRON_SECRET dans GitHub Secrets correspond exactement à la variable CRON_SECRET sur Vercel"; exit 1 ;;
             400) echo "::error::Type inconnu (400): $BODY"; exit 1 ;;
             500) echo "::error::Erreur serveur Vercel (500): $BODY — vérifie les variables d'environnement Vercel (VAPID_*, BLOB_READ_WRITE_TOKEN)"; exit 1 ;;
@@ -105,4 +124,4 @@ jobs:
       - name: Rien à envoyer (hors plage horaire)
         if: steps.notif.outputs.type == ''
         run: |
-          echo "Heure actuelle $(date -u +'%H:%M') UTC hors plage de toutes les notifications — rien à envoyer (normal si GitHub a un retard > 15min)"
+          echo "Heure Paris $(TZ=Europe/Paris date +'%H:%M') hors plage — rien à envoyer (normal : déclencheur de l'autre saison, ou retard GitHub > 14min)"

@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import {
+  DndContext, PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable,
+} from '@dnd-kit/core';
 import { addDays, startOfWeek, formatDate, formatDayShort, isSameDay } from '../utils/date';
 import { useAgenda } from '../hooks/useAgenda';
+import { newId } from '../utils/id';
 import Modal from '../components/Modal';
 
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6h à 23h
@@ -11,16 +15,31 @@ function timeToMinutes(t) {
   return h * 60 + m;
 }
 
+// Draggable : tap = éditer, maintenir + glisser = déplacer vers un autre créneau
 function EventBlock({ event, onClick }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: String(event.id),
+    data: { event },
+  });
   const top = ((timeToMinutes(event.heureDebut) - 360) / 60) * 56;
   const height = Math.max(((timeToMinutes(event.heureFin) - timeToMinutes(event.heureDebut)) / 60) * 56, 28);
   const color = event.color || 'var(--red)';
 
   return (
     <div
-      onClick={() => onClick(event)}
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={() => { if (!isDragging) onClick(event); }}
       className="absolute left-0 right-1 rounded-lg px-1.5 py-0.5 cursor-pointer text-white overflow-hidden"
-      style={{ top, height, background: color, fontSize: 10, lineHeight: '13px', zIndex: 2 }}
+      style={{
+        top, height, background: color, fontSize: 10, lineHeight: '13px',
+        zIndex: isDragging ? 30 : 2,
+        opacity: isDragging ? 0.85 : 1,
+        transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
+        boxShadow: isDragging ? 'var(--shadow-lift)' : undefined,
+        touchAction: 'none',
+      }}
     >
       <div className="font-semibold truncate">{event.heureDebut}</div>
       <div className="truncate opacity-90">{event.titre}</div>
@@ -28,16 +47,63 @@ function EventBlock({ event, onClick }) {
   );
 }
 
+// Cellule horaire : zone de drop + tap = nouveau RDV
+function HourCell({ day, hour, onClick }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `${formatDate(day)}|${hour}`,
+    data: { date: formatDate(day), hour },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className="h-14 border-b border-gray-50 cursor-pointer transition-colors"
+      style={{ background: isOver ? 'var(--red-50)' : undefined }}
+      onClick={() => onClick(day, hour)}
+    />
+  );
+}
+
 const EMPTY_FORM = { titre: '', date: formatDate(new Date()), heureDebut: '', heureFin: '', lieu: '', note: '', recurrent: false };
 
-export default function Agenda() {
+export default function Agenda({ pendingCompose, onPendingConsumed }) {
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date()));
   const [agenda, setAgenda] = useAgenda();
   const [showForm, setShowForm] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
+  // FAB "Nouveau RDV" → ouvrir le formulaire vierge
+  useEffect(() => {
+    if (pendingCompose === 'agenda') {
+      setEditEvent(null);
+      setForm({ ...EMPTY_FORM, date: formatDate(new Date()) });
+      setShowForm(true);
+      onPendingConsumed?.();
+    }
+  }, [pendingCompose]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } })
+  );
+
+  // Drop d'un événement sur une cellule → déplacement (durée conservée)
+  const handleDragEnd = ({ active, over }) => {
+    if (!over) return;
+    const event = active.data.current?.event;
+    const { date, hour } = over.data.current || {};
+    if (!event || !date || hour === undefined) return;
+    const startMins = timeToMinutes(event.heureDebut);
+    const duration = Math.max(30, timeToMinutes(event.heureFin) - startMins);
+    const newStart = hour * 60 + (startMins % 60);
+    const newEnd = Math.min(newStart + duration, 23 * 60 + 59);
+    const fmt = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    setAgenda(prev => prev.map(e =>
+      e.id === event.id ? { ...e, date, heureDebut: fmt(newStart), heureFin: fmt(newEnd) } : e
+    ));
+  };
 
   const eventsForDay = (date) => {
     const dateStr = formatDate(date);
@@ -70,13 +136,13 @@ export default function Agenda() {
         return e;
       }));
     } else {
-      const id = Date.now();
+      const id = newId();
       if (form.recurrent) {
         const events = [];
         for (let i = 0; i < 52; i++) {
           const d = new Date(form.date);
           d.setDate(d.getDate() + i * 7);
-          events.push({ ...form, id: id + i, recurrentId: id, date: formatDate(d) });
+          events.push({ ...form, id: `${id}_${i}`, recurrentId: id, date: formatDate(d) });
         }
         setAgenda(prev => [...(prev || []), ...events]);
       } else {
@@ -89,6 +155,13 @@ export default function Agenda() {
   const deleteEvent = () => {
     if (!editEvent) return;
     setAgenda(prev => prev.filter(e => e.id !== editEvent.id));
+    setShowForm(false);
+  };
+
+  const deleteSeries = () => {
+    if (!editEvent?.recurrentId) return;
+    if (!window.confirm('Supprimer toutes les occurrences de ce RDV récurrent ?')) return;
+    setAgenda(prev => prev.filter(e => e.recurrentId !== editEvent.recurrentId));
     setShowForm(false);
   };
 
@@ -122,35 +195,33 @@ export default function Agenda() {
 
       {/* Time grid */}
       <div className="flex-1 overflow-auto pb-nav">
-        <div className="flex">
-          {/* Hour labels */}
-          <div className="w-10 flex-shrink-0">
-            {HOURS.map(h => (
-              <div key={h} className="h-14 border-b border-gray-50 flex items-start justify-end pr-1 pt-0.5">
-                <span className="text-[10px] text-gray-300">{h}h</span>
-              </div>
-            ))}
-          </div>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <div className="flex">
+            {/* Hour labels */}
+            <div className="w-10 flex-shrink-0">
+              {HOURS.map(h => (
+                <div key={h} className="h-14 border-b border-gray-50 flex items-start justify-end pr-1 pt-0.5">
+                  <span className="text-[10px] text-gray-300">{h}h</span>
+                </div>
+              ))}
+            </div>
 
-          {/* Day columns */}
-          {days.map(d => {
-            const events = eventsForDay(d);
-            return (
-              <div key={formatDate(d)} className="flex-1 border-l border-gray-50 relative">
-                {HOURS.map(h => (
-                  <div
-                    key={h}
-                    className="h-14 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors"
-                    onClick={() => openNew(d, h)}
-                  />
-                ))}
-                {events.map(event => (
-                  <EventBlock key={event.id} event={event} onClick={openEdit} />
-                ))}
-              </div>
-            );
-          })}
-        </div>
+            {/* Day columns */}
+            {days.map(d => {
+              const events = eventsForDay(d);
+              return (
+                <div key={formatDate(d)} className="flex-1 border-l border-gray-50 relative">
+                  {HOURS.map(h => (
+                    <HourCell key={h} day={d} hour={h} onClick={openNew} />
+                  ))}
+                  {events.map(event => (
+                    <EventBlock key={event.id} event={event} onClick={openEdit} />
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </DndContext>
       </div>
 
       {/* Form modal */}
@@ -163,6 +234,11 @@ export default function Agenda() {
             {editEvent && (
               <button onClick={deleteEvent} className="py-2.5 px-4 rounded-lg bg-red-50 text-red-kick font-medium text-sm" style={{ color: 'var(--red)' }}>
                 Supprimer
+              </button>
+            )}
+            {editEvent?.recurrentId && (
+              <button onClick={deleteSeries} className="py-2.5 px-3 rounded-lg bg-red-50 font-medium text-sm" style={{ color: 'var(--red)' }}>
+                Série
               </button>
             )}
             <button

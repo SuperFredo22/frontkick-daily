@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, ChevronRight } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { formatDateFR, formatDate, today, yesterday } from '../utils/date';
 import { useJournal, useReporteAujourdhui } from '../hooks/useJournal';
 import { useAllBanques } from '../hooks/useBanques';
 import { useProjets, getNextProjetTask, getActiveProjects } from '../hooks/useProjets';
 import { useAgenda } from '../hooks/useAgenda';
-import { getConsecutiveNoSportDays } from '../utils/stats';
+import { getConsecutiveNoSportDays, getWeekProgress } from '../utils/stats';
+import { useObjectifs } from '../hooks/useObjectifs';
+import { daysSinceLastBackup } from '../utils/backup';
+import { isAutoBackupEnabled } from '../utils/autoBackup';
 import SuggestionCard from '../components/SuggestionCard';
 import Card from '../components/Card';
 import SportModule from '../components/sport/SportModule';
@@ -17,8 +20,43 @@ function makeItemLabel(banque, item) {
   return item.description;
 }
 
-const BANQUE_EMOJI = { tiktok: '🎬', fightfocus: '🌐', marque: '👕' };
 const BANQUE_COLOR = { tiktok: 'var(--red)', fightfocus: 'var(--cyan)', marque: 'var(--orange)' };
+
+const OBJECTIF_META = {
+  sport:      { emoji: '🥊', color: 'var(--green)' },
+  tiktok:     { emoji: '🎬', color: 'var(--red)' },
+  fightfocus: { emoji: '🌐', color: 'var(--cyan)' },
+  marque:     { emoji: '👕', color: 'var(--orange)' },
+};
+
+// Jauges de progression des objectifs hebdo (configurés dans les réglages)
+function ObjectifsHebdo({ objectifs, progress }) {
+  const actifs = Object.entries(objectifs || {}).filter(([, target]) => target > 0);
+  if (actifs.length === 0) return null;
+  return (
+    <div className="flex gap-2 px-5 mt-3">
+      {actifs.map(([key, target]) => {
+        const meta = OBJECTIF_META[key];
+        const done = progress[key] || 0;
+        const pct = Math.min(100, (done / target) * 100);
+        const reached = done >= target;
+        return (
+          <div key={key} className="flex-1 rounded-xl px-2.5 py-2" style={{ background: 'var(--surface)', boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span style={{ fontSize: 13 }}>{meta.emoji}</span>
+              <span className="text-[11px] font-bold" style={{ color: reached ? 'var(--green)' : 'var(--ink-2)' }}>
+                {reached ? '✓ ' : ''}{done}/{target}
+              </span>
+            </div>
+            <div style={{ height: 4, borderRadius: 2, background: 'var(--line-2)', overflow: 'hidden' }}>
+              <div style={{ width: `${pct}%`, height: '100%', borderRadius: 2, background: reached ? 'var(--green)' : meta.color, transition: 'width 300ms ease' }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // Long-press hook: touch events on mobile (iOS doesn't cancel them for context-menu detection),
 // pointer events on desktop. delay ms = long press threshold.
@@ -84,8 +122,8 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
 
   const [journal, setJournal] = useJournal(viewDate);
   const [reporte, setReporte] = useReporteAujourdhui(viewDate);
-  const [agenda, setAgenda] = useAgenda();
-  const { markDone, markUndone, getNextItem, hasAvailableItems } = useAllBanques();
+  const [, setAgenda] = useAgenda();
+  const { markDone, markUndone, getNextItem } = useAllBanques();
   const [projets, setProjets] = useProjets();
 
   const [bonusInput, setBonusInput] = useState('');
@@ -101,6 +139,10 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const [editCigs, setEditCigs] = useState(0);
 
   const skipped = reporte || [];
+
+  const [objectifs] = useObjectifs();
+  // Recalculé quand le journal change (tâche faite/annulée, sport…)
+  const weekProgress = getWeekProgress(); // eslint-disable-line
 
   const nextTiktok     = getNextItem('tiktok',     skipped);
   const nextFightfocus = getNextItem('fightfocus', skipped);
@@ -121,13 +163,28 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const hero  = allSuggestions[0] || null;
   const queue = allSuggestions.slice(1);
 
-  // Handle pendingCompose from FAB
+  // Handle pendingCompose from FAB ou deep link de notification
   useEffect(() => {
     if (pendingCompose === 'bonus') {
       setShowBonusInput(true);
       onPendingConsumed?.();
+    } else if (pendingCompose === 'sport') {
+      setShowSportSheet(true);
+      onPendingConsumed?.();
+    } else if (pendingCompose === 'note') {
+      setShowNoteModal(true);
+      onPendingConsumed?.();
     }
   }, [pendingCompose]);
+
+  // Badge sur l'icône de l'app (PWA iOS 16.4+) : nombre de tâches restantes
+  useEffect(() => {
+    if (isYesterday) return;
+    try {
+      if (allSuggestions.length > 0) navigator.setAppBadge?.(allSuggestions.length);
+      else navigator.clearAppBadge?.();
+    } catch { /* non supporté */ }
+  }, [allSuggestions.length, isYesterday]);
 
   // ─── Agenda event ────────────────────────────────────────────────────────
 
@@ -280,6 +337,8 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     }));
   };
 
+  const hab = journal?.habitudes || { prieres: 0, sport: false, cigarettes: 0, note: '' };
+
   // ─── Long press sur prières & cigarettes ─────────────────────────────────
   // Après un long press, iOS synthétise un click ~300ms après touchend qui frappe
   // le fond du modal et le refermerait immédiatement. Ce ref bloque la fermeture
@@ -302,7 +361,6 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   );
 
   const noSportDays = getConsecutiveNoSportDays();
-  const hab = journal?.habitudes || { prieres: 0, sport: false, cigarettes: 0, note: '' };
   const tachesFaites    = (journal?.taches || []).filter(t => t.statut === 'fait');
   const tachesReportees = (journal?.taches || []).filter(t => t.statut === 'reporte');
 
@@ -380,6 +438,23 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           <span className="text-xl">⚠️</span>
           <p className="text-sm text-amber-800 font-medium">{noSportDays} jours sans sport — bouge !</p>
         </div>
+      )}
+
+      {/* Rappel de sauvegarde : jamais sauvegardé ou > 7 jours */}
+      {!isYesterday && !isAutoBackupEnabled() && (daysSinceLastBackup() === null || daysSinceLastBackup() > 7) && (
+        <button
+          onClick={onOpenSettings}
+          className="mx-4 mt-2 rounded-xl px-4 py-2.5 flex items-center gap-3 text-left btn-press"
+          style={{ background: 'var(--red-50)', border: '1px solid #F4D5D1' }}
+        >
+          <span className="text-xl">💾</span>
+          <span className="text-sm font-medium flex-1" style={{ color: 'var(--ink-2)' }}>
+            {daysSinceLastBackup() === null
+              ? 'Tes données ne sont pas sauvegardées — exporte-les ou active la sauvegarde auto'
+              : `Dernière sauvegarde il y a ${daysSinceLastBackup()} jours`}
+          </span>
+          <span className="text-xs font-semibold shrink-0" style={{ color: 'var(--red)' }}>Réglages ›</span>
+        </button>
       )}
 
       {/* ── Habits strip ───────────────────────────────────────────────── */}
@@ -460,6 +535,9 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
         </button>
       </div>
 
+      {/* ── Objectifs hebdo ────────────────────────────────────────────── */}
+      {!isYesterday && <ObjectifsHebdo objectifs={objectifs} progress={weekProgress} />}
+
       {/* ── À faire maintenant ─────────────────────────────────────────── */}
       <section className="px-4 mt-5">
         <div className="flex items-center justify-between mb-3">
@@ -498,9 +576,9 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
             <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>Suite</p>
           </div>
           <div className="flex flex-col gap-3">
-            {queue.map((s, i) => (
+            {queue.map((s) => (
               <SuggestionCard
-                key={i}
+                key={`${s.banque}_${s.projet?.id ?? ''}_${s.item.id}`}
                 banque={s.banque}
                 item={s.item}
                 config={getSuggConfig(s)}
@@ -583,12 +661,6 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           </p>
           <Card>
             {tachesFaites.map((t, i) => {
-              const color = t.banque === 'tiktok' ? 'var(--red)'
-                : t.banque === 'fightfocus' ? 'var(--cyan)'
-                : t.banque === 'marque' ? 'var(--orange)'
-                : t.banque === 'projet'
-                ? (projets.find(p => p.id === t.projetId)?.couleur || 'var(--ink-3)')
-                : 'var(--ink-3)';
               return (
                 <div key={i} className="flex items-center gap-2 mb-2">
                   <span

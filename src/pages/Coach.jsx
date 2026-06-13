@@ -1,29 +1,47 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Bot, Send, Key, AlertTriangle, Info, Lightbulb, ShieldAlert, RefreshCw, Bell, BellOff } from 'lucide-react';
 import { analyzeData, buildSystemPrompt } from '../utils/dataAnalyst';
-import { callGemini } from '../utils/gemini';
+import { callCoach, hasServerKey } from '../utils/coachApi';
 import { getNotificationStatus, subscribeToNotifications, unsubscribeFromNotifications } from '../utils/notifications';
 import { formatDate } from '../utils/date';
 
 const API_KEY_STORAGE = 'fk_perplexity_key';
-const TODAY           = formatDate(new Date());
-const SESSION_KEY     = `fk_coach_session_${TODAY}`;
 const BILANS_KEY      = 'fk_coach_bilans';
+
+// Calculées à la demande (et non au chargement du module) : une PWA iOS peut
+// rester en mémoire plusieurs jours, les constantes seraient figées sur la
+// date d'ouverture.
+const todayStr   = () => formatDate(new Date());
+
+function cleanOldSessions() {
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    const cutoffStr = `fk_coach_session_${formatDate(cutoff)}`;
+    const toDelete = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith('fk_coach_session_') && k < cutoffStr) toDelete.push(k);
+    }
+    toDelete.forEach(k => localStorage.removeItem(k));
+  } catch { /* storage indisponible */ }
+}
 
 function saveBilan(text) {
   try {
+    const today   = todayStr();
     const clean   = text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#{1,3} /g, '').slice(0, 300);
     const bilans  = JSON.parse(localStorage.getItem(BILANS_KEY) || '[]');
-    const others  = bilans.filter(b => b.date !== TODAY);
-    others.unshift({ date: TODAY, resume: clean });
+    const others  = bilans.filter(b => b.date !== today);
+    others.unshift({ date: today, resume: clean });
     localStorage.setItem(BILANS_KEY, JSON.stringify(others.slice(0, 14)));
-  } catch {}
+  } catch { /* storage indisponible */ }
 }
 
 function getBilanContext() {
   try {
     const bilans = JSON.parse(localStorage.getItem(BILANS_KEY) || '[]');
-    const past   = bilans.filter(b => b.date !== TODAY).slice(0, 5);
+    const past   = bilans.filter(b => b.date !== todayStr()).slice(0, 5);
     if (!past.length) return '';
     return '\n\nHISTORIQUE — résumés bilans récents :\n' +
       past.map(b => `${b.date} : ${b.resume}`).join('\n');
@@ -156,7 +174,7 @@ const NOTIF_STATUS_LABELS = {
   'denied':                 { label: 'Bloqué dans les réglages iPhone',    color: 'var(--red)'   },
   'default':                { label: 'Non activé',                         color: 'var(--ink-3)' },
   'granted-not-subscribed': { label: 'Permission accordée, non inscrit',  color: '#D97706'       },
-  'subscribed':             { label: '✓ Actif — 9 rappels par jour',       color: '#16A34A'      },
+  'subscribed':             { label: '✓ Actif — rappels quotidiens + bilan hebdo', color: '#16A34A' },
 };
 
 function NotifCard() {
@@ -240,11 +258,20 @@ function NotifCard() {
   );
 }
 
-export default function Coach() {
+const WEEKLY_PROMPT = "Fais-moi le bilan de ma semaine écoulée : tendances sport, prières, cigarettes et tâches accomplies. Donne-moi 2 victoires, 1 point faible, et 1 priorité concrète pour la semaine qui arrive.";
+
+export default function Coach({ pendingCompose, onPendingConsumed }) {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '');
+  // null = en cours de vérification ; true = clé configurée sur Vercel (pas de setup nécessaire)
+  const [serverKey, setServerKey] = useState(null);
+  // Date à laquelle appartient la conversation en mémoire. Si la PWA reste
+  // ouverte après minuit, on bascule vers la session du nouveau jour au lieu
+  // d'écrire l'historique de la veille dans la clé du jour courant.
+  const [sessionDate, setSessionDate] = useState(() => todayStr());
   const [messages, setMessages] = useState(() => {
     try {
-      const saved = localStorage.getItem(SESSION_KEY);
+      cleanOldSessions();
+      const saved = localStorage.getItem(`fk_coach_session_${todayStr()}`);
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
@@ -261,16 +288,50 @@ export default function Coach() {
     return buildSystemPrompt(analysis) + getBilanContext();
   }, [analysis]);
 
-  // Persist session
+  // Persist session vers la clé de SA date (et non un todayStr() recalculé)
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(messages));
+      localStorage.setItem(`fk_coach_session_${sessionDate}`, JSON.stringify(messages));
     }
-  }, [messages]);
+  }, [messages, sessionDate]);
+
+  // Bascule de jour : au retour au premier plan, si la date a changé, on
+  // recharge la conversation du nouveau jour (vide → le bilan du jour réapparaît)
+  useEffect(() => {
+    const checkRollover = () => {
+      const now = todayStr();
+      if (now === sessionDate) return;
+      setSessionDate(now);
+      try {
+        const saved = localStorage.getItem(`fk_coach_session_${now}`);
+        setMessages(saved ? JSON.parse(saved) : []);
+      } catch { setMessages([]); }
+    };
+    document.addEventListener('visibilitychange', checkRollover);
+    window.addEventListener('focus', checkRollover);
+    return () => {
+      document.removeEventListener('visibilitychange', checkRollover);
+      window.removeEventListener('focus', checkRollover);
+    };
+  }, [sessionDate]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  useEffect(() => {
+    hasServerKey().then(setServerKey);
+  }, []);
+
+  const ready = !!apiKey || serverKey === true;
+
+  // Deep link « bilan hebdo » (notification du dimanche soir)
+  useEffect(() => {
+    if (pendingCompose !== 'bilan-hebdo') return;
+    if (serverKey === null) return; // attendre de savoir si une clé existe
+    onPendingConsumed?.();
+    if (ready && !loading) sendMessage(WEEKLY_PROMPT);
+  }, [pendingCompose, serverKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chatHistory = messages.map(m => ({
     role: m.role === 'user' ? 'user' : 'assistant',
@@ -285,7 +346,7 @@ export default function Coach() {
     setLoading(true);
 
     try {
-      const reply = await callGemini(apiKey, systemPrompt, chatHistory, text.trim());
+      const reply = await callCoach(apiKey, systemPrompt, chatHistory, text.trim());
       setMessages(prev => {
         const isFirstAI = prev.filter(m => m.role === 'model').length === 0;
         if (isFirstAI) saveBilan(reply);
@@ -319,7 +380,7 @@ export default function Coach() {
             onClick={() => {
               if (window.confirm('Effacer la clé API et réinitialiser le coach ?')) {
                 localStorage.removeItem(API_KEY_STORAGE);
-                localStorage.removeItem(SESSION_KEY);
+                localStorage.removeItem(`fk_coach_session_${sessionDate}`);
                 setApiKey('');
                 setMessages([]);
               }
@@ -332,9 +393,17 @@ export default function Coach() {
         )}
       </div>
 
-      {!apiKey ? (
+      {!ready && serverKey === null ? (
+        <div className="flex-1 flex items-center justify-center">
+          <RefreshCw size={18} className="animate-spin" style={{ color: 'var(--ink-3)' }} />
+        </div>
+      ) : !ready ? (
         <div className="flex-1 overflow-auto">
           <SetupCard onSave={handleSave} />
+          <p className="text-xs text-center px-6 mt-3" style={{ color: 'var(--ink-3)' }}>
+            Astuce : ajoute la variable <strong>PERPLEXITY_API_KEY</strong> sur Vercel
+            pour ne plus jamais avoir à coller de clé ici.
+          </p>
         </div>
       ) : (
         <>

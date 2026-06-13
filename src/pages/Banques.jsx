@@ -21,7 +21,7 @@ const TABS = [
 
 // ─── Item context menu ──────────────────────────────────────────────────────
 
-function ItemMenu({ open, onClose, itemLabel, color, onModifier, onDejaFait, onSupprimer }) {
+function ItemMenu({ open, onClose, itemLabel, onModifier, onDejaFait, onSupprimer }) {
   const [step, setStep] = useState('menu'); // 'menu' | 'confirm'
 
   const handleClose = () => { setStep('menu'); onClose(); };
@@ -202,6 +202,8 @@ function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({});
   const [showDone, setShowDone] = useState(false);
+  const [deleted, setDeleted] = useState(null); // { item, index } → toast « Annuler »
+  const undoTimer = useRef(null);
   const tab = TABS.find(t => t.id === banque);
 
   const sensors = useSensors(
@@ -267,7 +269,28 @@ function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 
   };
 
   const handleDejaFait = (id) => setItems(prev => prev.map(i => i.id === id ? { ...i, statut: 'deja_fait' } : i));
-  const handleSupprimer = (id) => setItems(prev => prev.filter(i => i.id !== id));
+
+  // Suppression avec possibilité d'annuler pendant 5 s (swipe accidentel)
+  const handleSupprimer = (id) => {
+    const index = items.findIndex(i => i.id === id);
+    if (index === -1) return;
+    const item = items[index];
+    setItems(prev => prev.filter(i => i.id !== id));
+    setDeleted({ item, index });
+    clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setDeleted(null), 5000);
+  };
+
+  const undoDelete = () => {
+    if (!deleted) return;
+    clearTimeout(undoTimer.current);
+    setItems(prev => {
+      const next = [...prev];
+      next.splice(Math.min(deleted.index, next.length), 0, deleted.item);
+      return next;
+    });
+    setDeleted(null);
+  };
 
   const isOpen = !!editItem || showAdd;
 
@@ -308,6 +331,30 @@ function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 
           ))}
         </SortableContext>
       </DndContext>
+
+      {/* Toast annulation suppression */}
+      {deleted && (
+        <div
+          className="fixed left-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl"
+          style={{
+            bottom: 'calc(96px + env(safe-area-inset-bottom))',
+            transform: 'translateX(-50%)',
+            background: 'var(--ink)',
+            color: 'var(--bg)',
+            boxShadow: 'var(--shadow-lift)',
+            maxWidth: 'calc(100vw - 32px)',
+          }}
+        >
+          <span className="text-sm truncate" style={{ maxWidth: 200 }}>🗑️ Supprimé</span>
+          <button
+            onClick={undoDelete}
+            className="text-sm font-bold shrink-0 btn-press"
+            style={{ color: 'var(--orange)' }}
+          >
+            Annuler
+          </button>
+        </div>
+      )}
 
       {/* Deja fait items (non-draggable, outside SortableContext intentionally) */}
       {showDone && dejaFait.length > 0 && (
@@ -665,10 +712,17 @@ function ProjetsList({ projets, setProjets }) {
 
 // ─── Main Banques page ────────────────────────────────────────────────────────
 
+const PRIORITY_RANK = {
+  HAUTE: 0, MOYENNE: 1, FAIBLE: 2,
+  P1: 0, P2: 1, P3: 2,
+  'Phase 1': 0, 'Phase 2': 1, 'Phase 3': 2,
+};
+
 export default function Banques({ pendingCompose, onPendingConsumed }) {
   const [activeTab, setActiveTab] = useState('tiktok');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showSortModal, setShowSortModal] = useState(false);
   const [tiktok, setTiktok] = useTikTok();
   const [fightfocus, setFightFocus] = useFightFocus();
   const [marque, setMarque] = useMarque();
@@ -687,6 +741,25 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
   const data = { tiktok, fightfocus, marque };
 
   const activeTabConfig = TABS.find(t => t.id === activeTab);
+
+  // Trie les items actifs (à faire / à tourner) ; les faits et déjà réalisés gardent leur ordre
+  const applySort = (mode) => {
+    const setItems = setters[activeTab];
+    if (!setItems) return;
+    const labelOf = (i) => (activeTab === 'tiktok' ? i.titre : i.description) || '';
+    const rankOf  = (i) => PRIORITY_RANK[i.priorite || i.phase] ?? 99;
+    setItems(prev => {
+      const active = prev.filter(i => !['publiee', 'fait', 'deja_fait'].includes(i.statut));
+      const rest   = prev.filter(i => ['publiee', 'fait', 'deja_fait'].includes(i.statut));
+      const sorted = [...active].sort((a, b) =>
+        mode === 'priorite'
+          ? rankOf(a) - rankOf(b) || labelOf(a).localeCompare(labelOf(b), 'fr')
+          : labelOf(a).localeCompare(labelOf(b), 'fr')
+      );
+      return [...sorted, ...rest];
+    });
+    setShowSortModal(false);
+  };
 
   const filterOptions = activeTab === 'tiktok'
     ? [{ id: 'all', label: 'Toutes' }, { id: 'a_tourner', label: 'À tourner' }, { id: 'publiee', label: 'Publiées' }]
@@ -745,6 +818,7 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
             </button>
           ))}
           <button
+            onClick={() => setShowSortModal(true)}
             className="ml-auto flex items-center gap-1 flex-shrink-0 btn-press"
             style={{ fontSize: 12, color: 'var(--ink-3)' }}
           >
@@ -768,6 +842,23 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
           <ProjetsList projets={projets} setProjets={setProjets} />
         )}
       </div>
+
+      {/* Sort modal */}
+      <Modal open={showSortModal} onClose={() => setShowSortModal(false)} title="Trier les items">
+        <div className="flex flex-col gap-1">
+          <button onClick={() => applySort('priorite')}
+            className="w-full text-left py-3 px-3 rounded-xl hover:bg-gray-50 text-sm font-medium text-gray-700 flex items-center gap-3 btn-press">
+            <span>🎯</span> Par {activeTab === 'marque' ? 'phase' : 'priorité'}
+          </button>
+          <button onClick={() => applySort('alpha')}
+            className="w-full text-left py-3 px-3 rounded-xl hover:bg-gray-50 text-sm font-medium text-gray-700 flex items-center gap-3 btn-press">
+            <span>🔤</span> Alphabétique
+          </button>
+          <p className="text-xs text-gray-400 mt-2 px-1">
+            Le tri réorganise la liste de façon permanente — tu peux toujours réordonner manuellement ensuite.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }
