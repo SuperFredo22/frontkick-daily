@@ -17,7 +17,7 @@ function ClubModal({ open, onClose, onSave }) {
         <button
           onClick={() => { onSave(notes); setNotes(''); }}
           className="w-full py-2.5 rounded-lg text-white font-medium text-sm"
-          style={{ background: 'var(--green)' }}
+          style={{ background: 'var(--grad-fire)' }}
         >
           Enregistrer
         </button>
@@ -52,7 +52,7 @@ function AutreModal({ open, onClose, onSave }) {
           onClick={() => { if (texte.trim()) { onSave(texte.trim()); setTexte(''); } }}
           disabled={!texte.trim()}
           className="w-full py-2.5 rounded-lg text-white font-medium text-sm disabled:opacity-40"
-          style={{ background: 'var(--green)' }}
+          style={{ background: 'var(--grad-fire)' }}
         >
           Enregistrer
         </button>

@@ -5,7 +5,7 @@ export function useProjets() {
   return useStorage('projets', projetsInitial);
 }
 
-export const PROJET_PALETTE = ['#C0392B', '#00b4d8', '#E67E22', '#27AE60', '#8E44AD', '#2C3E50'];
+export const PROJET_PALETTE = ['#FF5757', '#00B4D8', '#FF9F1C', '#2ED47A', '#7C3AED', '#64748B'];
 
 export function getNextProjetTask(projet, skippedToday) {
   if (!projet?.taches?.length) return null;

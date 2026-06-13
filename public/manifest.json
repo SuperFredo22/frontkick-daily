@@ -1,11 +1,11 @@
 {
   "name": "Frontkick Daily",
   "short_name": "FK Daily",
-  "description": "Ton tableau de bord quotidien Frontkick",
+  "description": "Transforme ta discipline quotidienne en progression de combattant",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FAFAFA",
-  "theme_color": "#C0392B",
+  "background_color": "#0B0B0F",
+  "theme_color": "#0B0B0F",
   "orientation": "portrait",
   "icons": [
     {

@@ -16,7 +16,7 @@ const TABS = [
   { id: 'tiktok',     label: 'TikTok',     color: 'var(--red)',    bg: 'var(--red-50)' },
   { id: 'fightfocus', label: 'FightFocus', color: 'var(--cyan)',   bg: 'var(--cyan-soft)' },
   { id: 'marque',     label: 'Marque',     color: 'var(--orange)', bg: 'var(--orange-soft)' },
-  { id: 'projets',    label: 'Projets',    color: '#8E44AD',       bg: '#F3E5F5' },
+  { id: 'projets',    label: 'Projets',    color: 'var(--violet)', bg: 'var(--violet-soft)' },
 ];
 
 // ─── Item context menu ──────────────────────────────────────────────────────
@@ -594,7 +594,7 @@ function ProjetsList({ projets, setProjets }) {
         <span className="text-sm text-gray-500">{(projets || []).length} projet{(projets || []).length !== 1 ? 's' : ''}</span>
         <button onClick={openAdd}
           className="w-8 h-8 rounded-full text-white text-lg font-bold flex items-center justify-center shadow-md"
-          style={{ background: '#8E44AD' }}>+</button>
+          style={{ background: 'var(--violet)' }}>+</button>
       </div>
 
       {(projets || []).length === 0 && (
@@ -622,7 +622,7 @@ function ProjetsList({ projets, setProjets }) {
           <div className="flex gap-2 w-full">
             <button onClick={save} disabled={!form.nom.trim()}
               className="flex-1 py-2.5 rounded-lg text-white font-medium text-sm disabled:opacity-40"
-              style={{ background: '#8E44AD' }}>
+              style={{ background: 'var(--violet)' }}>
               Enregistrer
             </button>
             <button onClick={() => setShowForm(false)}

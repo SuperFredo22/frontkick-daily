@@ -6,7 +6,11 @@ import { useAllBanques } from '../hooks/useBanques';
 import { useProjets, getNextProjetTask, getActiveProjects } from '../hooks/useProjets';
 import { useAgenda } from '../hooks/useAgenda';
 import { getConsecutiveNoSportDays } from '../utils/stats';
+import { useProgression } from '../hooks/useProgression';
+import { XP } from '../utils/gamification';
 import SuggestionCard from '../components/SuggestionCard';
+import HUD from '../components/HUD';
+import { XpFlash, LevelUpOverlay } from '../components/RewardFx';
 import Card from '../components/Card';
 import SportModule from '../components/sport/SportModule';
 import Modal from '../components/Modal';
@@ -78,7 +82,7 @@ function useLongPress(onLongPress, onShortPress, delay = 500) {
   };
 }
 
-export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSettings }) {
+export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSettings, onNavigate }) {
   const [viewDate, setViewDate] = useState(today());
   const isYesterday = formatDate(viewDate) !== formatDate(today());
 
@@ -87,6 +91,21 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const [agenda, setAgenda] = useAgenda();
   const { markDone, markUndone, getNextItem, hasAvailableItems } = useAllBanques();
   const [projets, setProjets] = useProjets();
+
+  // Combatant progression — recomputed whenever today's data changes so the
+  // XP bar and streak react instantly to completing a mission.
+  const [prog, refreshProg] = useProgression();
+  useEffect(() => { refreshProg(); }, [journal, projets, reporte, refreshProg]);
+
+  // Reward feedback: "+XP" flash + level-up overlay.
+  const [xpFlash, setXpFlash] = useState({ amount: 0, trigger: 0 });
+  const [levelUp, setLevelUp] = useState(null);
+  const prevLevelRef = useRef(prog.level);
+  const flashXp = (amount) => setXpFlash(f => ({ amount, trigger: f.trigger + 1 }));
+  useEffect(() => {
+    if (prog.level > prevLevelRef.current) setLevelUp({ level: prog.level, rank: prog.rank });
+    prevLevelRef.current = prog.level;
+  }, [prog.level, prog.rank]);
 
   const [bonusInput, setBonusInput] = useState('');
   const [showBonusInput, setShowBonusInput] = useState(false);
@@ -205,6 +224,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const handleSuggestionFait = (suggestion, timeSlot) => {
     if (suggestion.banque === 'projet') handleProjetFait(suggestion.projet, suggestion.item, timeSlot);
     else handleFait(suggestion.banque, suggestion.item, timeSlot);
+    flashXp(XP.mission);
   };
 
   const handleSuggestionReporte = (suggestion) => {
@@ -240,6 +260,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       habitudes: { ...(prev.habitudes || {}), sport: true },
     }));
     setShowSportSheet(false);
+    flashXp(XP.training);
   };
 
   const handleSportClear = () => {
@@ -257,6 +278,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     setJournal(prev => ({ ...prev, bonus: [...(prev.bonus || []), { id: Date.now(), texte: bonusInput.trim() }] }));
     setBonusInput('');
     setShowBonusInput(false);
+    flashXp(XP.bonus);
   };
 
   const removeBonus = (id) => {
@@ -328,20 +350,20 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   return (
     <div className="flex flex-col gap-0 pb-nav">
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between px-5 pt-4 pb-1">
+      <div className="flex items-center justify-between px-5 pt-4 pb-3">
         <div>
-          <p className="uppercase tracking-widest text-[11px] font-bold mb-0.5" style={{ color: 'var(--ink-3)' }}>
+          <p className="uppercase tracking-widest text-[10px] font-bold mb-0.5" style={{ color: 'var(--ink-3)' }}>
             {isYesterday ? 'Modification veille' : new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-            {isYesterday ? formatDateFR(viewDate) : "Bonjour 👋"}
+          <h1 className="font-display" style={{ fontSize: 21, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+            {isYesterday ? formatDateFR(viewDate) : 'Prêt au combat'}
           </h1>
         </div>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2">
           {isYesterday && (
             <button
               onClick={() => setViewDate(today())}
-              className="text-sm px-3 py-1.5 rounded-lg font-semibold btn-press"
+              className="px-3 py-1.5 rounded-lg font-semibold btn-press"
               style={{ background: 'var(--red)', color: 'white', fontSize: 12 }}
             >
               ← Aujourd'hui
@@ -350,8 +372,8 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           {!isYesterday && (
             <button
               onClick={() => setViewDate(yesterday())}
-              className="text-sm px-3 py-1.5 rounded-lg font-medium btn-press"
-              style={{ background: 'var(--line-2)', color: 'var(--ink-2)', fontSize: 12 }}
+              className="px-3 py-1.5 rounded-lg font-medium btn-press"
+              style={{ background: 'var(--surface-2)', color: 'var(--ink-2)', fontSize: 12, border: '1px solid var(--line)' }}
             >
               Hier
             </button>
@@ -359,32 +381,42 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           <button
             onClick={onOpenSettings}
             className="flex items-center justify-center btn-press"
-            style={{ width: 38, height: 38, borderRadius: 12, background: 'var(--surface)', boxShadow: 'var(--shadow-card)' }}
+            style={{ width: 38, height: 38, borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--line)' }}
           >
             <Menu size={18} strokeWidth={2} color="var(--ink-2)" />
           </button>
         </div>
       </div>
 
+      {/* ── Combatant HUD ─────────────────────────────────────────────── */}
+      {!isYesterday && (
+        <div className="px-4 mb-1">
+          <HUD prog={prog} onOpen={() => onNavigate?.('stats')} />
+        </div>
+      )}
+
       {/* Retroactivity banner */}
       {isYesterday && (
-        <div className="mx-4 mt-2 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 flex items-center gap-3">
+        <div className="mx-4 mt-2 rounded-xl px-4 py-3 flex items-center gap-3" style={{ background: 'var(--orange-soft)', border: '1px solid rgba(255,159,28,0.35)' }}>
           <span className="text-xl">📅</span>
-          <p className="text-sm text-amber-800 font-semibold">Modification de la veille</p>
+          <p className="text-sm font-semibold" style={{ color: 'var(--orange)' }}>Modification de la veille</p>
         </div>
       )}
 
       {/* Nudge sport */}
       {!isYesterday && noSportDays >= 3 && !journal?.sport && !journal?.habitudes?.sport && (
-        <div className="mx-4 mt-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center gap-3">
+        <div className="mx-4 mt-2 rounded-xl px-4 py-2.5 flex items-center gap-3" style={{ background: 'var(--orange-soft)', border: '1px solid rgba(255,159,28,0.3)' }}>
           <span className="text-xl">⚠️</span>
-          <p className="text-sm text-amber-800 font-medium">{noSportDays} jours sans sport — bouge !</p>
+          <p className="text-sm font-medium" style={{ color: 'var(--orange)' }}>{noSportDays} jours sans entraînement — bouge !</p>
         </div>
       )}
 
-      {/* ── Habits strip ───────────────────────────────────────────────── */}
+      {/* ── Entraînement strip ─────────────────────────────────────────── */}
+      <p className="uppercase tracking-widest text-[11px] font-bold px-5 mt-5 mb-2" style={{ color: 'var(--ink-3)' }}>
+        Entraînement
+      </p>
       <div
-        className="flex gap-2 px-5 mt-4 pb-1"
+        className="flex gap-2 px-5 pb-1"
         style={{ overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
       >
         {/* Prières — tap = +1, long press = éditer */}
@@ -464,7 +496,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       <section className="px-4 mt-5">
         <div className="flex items-center justify-between mb-3">
           <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>
-            À faire maintenant
+            Mission prioritaire
           </p>
           <span className="text-[11px] font-semibold" style={{ color: 'var(--ink-3)' }}>
             {allSuggestions.length > 0 ? `1/${allSuggestions.length}` : '0/0'}
@@ -485,8 +517,9 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           />
         ) : (
           <div className="text-center py-8">
-            <div className="text-4xl mb-2">🎉</div>
-            <p className="text-sm font-medium" style={{ color: 'var(--ink-2)' }}>Toutes les tâches sont accomplies !</p>
+            <div className="text-4xl mb-2">🏆</div>
+            <p className="text-sm font-bold font-display" style={{ color: 'var(--ink)' }}>Combat remporté</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--ink-3)' }}>Toutes les missions sont accomplies</p>
           </div>
         )}
       </section>
@@ -495,7 +528,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       {queue.length > 0 && (
         <section className="px-4 mt-6">
           <div className="flex items-center justify-between mb-3">
-            <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>Suite</p>
+            <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>File de missions</p>
           </div>
           <div className="flex flex-col gap-3">
             {queue.map((s, i) => (
@@ -518,7 +551,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       <section className="px-4 mt-6">
         <div className="flex items-center justify-between mb-3">
           <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>
-            J'ai aussi fait
+            Missions bonus
           </p>
           {!showBonusInput && (
             <button
@@ -562,7 +595,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
         )}
 
         {(journal?.bonus || []).length === 0 && !showBonusInput && (
-          <p className="text-sm italic" style={{ color: 'var(--ink-3)' }}>Rien encore — ajoute une tâche bonus !</p>
+          <p className="text-sm italic" style={{ color: 'var(--ink-3)' }}>Aucune mission bonus — ajoute-en une !</p>
         )}
         <div className="flex flex-col gap-2">
           {(journal?.bonus || []).map(b => (
@@ -579,7 +612,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       {(tachesFaites.length > 0 || tachesReportees.length > 0) && (
         <section className="px-4 mt-6 mb-2">
           <p className="uppercase tracking-widest text-[11px] font-bold mb-3" style={{ color: 'var(--ink-3)' }}>
-            Déjà fait aujourd'hui · {tachesFaites.length}
+            Victoires du jour · {tachesFaites.length}
           </p>
           <Card>
             {tachesFaites.map((t, i) => {
@@ -776,6 +809,18 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           </button>
         </div>
       </Modal>
+
+      {/* ── Reward feedback ────────────────────────────────────────────── */}
+      <XpFlash
+        amount={xpFlash.amount}
+        trigger={xpFlash.trigger}
+        onDone={() => setXpFlash(f => ({ ...f, trigger: 0 }))}
+      />
+      <LevelUpOverlay
+        level={levelUp?.level}
+        rank={levelUp?.rank}
+        onClose={() => setLevelUp(null)}
+      />
     </div>
   );
 }

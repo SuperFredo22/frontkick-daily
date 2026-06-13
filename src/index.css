@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -24,44 +24,70 @@ body {
   flex-direction: column;
   max-width: 480px;
   margin: 0 auto;
+  /* Subtle arena glow behind the app */
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(124,58,237,0.10), transparent 60%),
+    radial-gradient(90% 50% at 100% 0%, rgba(255,87,87,0.06), transparent 55%);
 }
 
 input, textarea, select {
   font-family: inherit;
 }
 
+/* Dark-theme form fields */
+input, textarea, select {
+  color: var(--ink);
+}
+input::placeholder, textarea::placeholder { color: var(--ink-3); }
+input[type="time"], input[type="date"] {
+  color-scheme: dark;
+}
+
+/* ── Dark-theme leverage: flip legacy light surfaces ──────────────────
+   The codebase uses bg-white liberally for cards. Remap it to the dark
+   surface token (text-white is untouched, so colored-button labels stay
+   bright). A faint border gives cards definition on the dark background. */
+.bg-white {
+  background-color: var(--surface) !important;
+  border: 1px solid var(--line);
+}
+
 .drag-handle {
   cursor: grab;
   touch-action: none;
 }
-
-.drag-handle:active {
-  cursor: grabbing;
-}
+.drag-handle:active { cursor: grabbing; }
 
 /* Bottom nav safe area */
 .pb-nav {
   padding-bottom: calc(64px + env(safe-area-inset-bottom));
 }
 
-/* Modal overlay */
+/* ── Modal — dark sheet ───────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   z-index: 50;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
 }
 
 .modal-sheet {
   background: var(--surface);
-  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 24px 24px 0 0;
   width: 100%;
+  max-width: 480px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
   padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: var(--shadow-lift);
 }
 
 .modal-body {
@@ -78,27 +104,64 @@ input, textarea, select {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: var(--ink-3);
   border-radius: 2px;
 }
 
-/* Strikethrough for completed items */
+/* Completed items */
 .line-through-completed {
   text-decoration: line-through;
   opacity: 0.5;
 }
 
 /* Button press feedback */
-.btn-press {
-  transition: transform 80ms ease;
+.btn-press { transition: transform 80ms ease; }
+.btn-press:active { transform: scale(0.97); }
+
+/* ── Game-feel utilities ──────────────────────────────────────────── */
+.font-display {
+  font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
-.btn-press:active {
-  transform: scale(0.97);
+
+.text-gradient-fire {
+  background: var(--grad-fire);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
+
+/* XP / progress bar shimmer */
+@keyframes xpShimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(220%); }
+}
+.xp-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: translateX(-100%);
+  animation: xpShimmer 2.4s ease-in-out infinite;
+}
+
+/* Streak flame pulse */
+@keyframes flamePulse {
+  0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 4px rgba(255,159,28,0.5)); }
+  50%      { transform: scale(1.12); filter: drop-shadow(0 0 10px rgba(255,159,28,0.8)); }
+}
+.flame-pulse { animation: flamePulse 1.8s ease-in-out infinite; }
+
+/* Level-up / reward pop */
+@keyframes rewardPop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.reward-pop { animation: rewardPop 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Badge unlocked sheen */
+.badge-locked { filter: grayscale(1) brightness(0.5); opacity: 0.55; }
