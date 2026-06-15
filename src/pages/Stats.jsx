@@ -10,6 +10,7 @@ import { WEEKLY_TRAINING_GOAL } from '../utils/gamification';
 import { Check, Lock as LockIcon, Palette, BadgeCheck } from 'lucide-react';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
+import Jalons from '../components/Jalons';
 
 function StatBox({ label, value, sub, color }) {
   return (
@@ -238,6 +239,9 @@ export default function Stats() {
 
       {/* Combatant hero */}
       <ProgressionHero prog={prog} />
+
+      {/* Objectifs & jalons */}
+      <Jalons />
 
       {/* Badges */}
       <section>
