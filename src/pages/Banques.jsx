@@ -99,6 +99,11 @@ function StaticItem({ item, banque, tab, onModifier, onDejaFait, onSupprimer }) 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-800 leading-snug line-through">{label}</p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {banque === 'tiktok' && item.serie && !isDejaFait && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--surface-2)', color: 'var(--ink-2)', border: '1px solid var(--line)' }}>
+                📅 {item.serie}
+              </span>
+            )}
             {badge && !isDejaFait && (
               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: tab.bg, color: tab.color }}>
                 {badge}
@@ -164,6 +169,11 @@ function SortableItem({ item, banque, tab, onEdit, onDejaFait, onSupprimer, hidd
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium text-gray-800 leading-snug ${(isDone || isDejaFait) ? 'line-through' : ''}`}>{label}</p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {banque === 'tiktok' && item.serie && !isDejaFait && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--surface-2)', color: 'var(--ink-2)', border: '1px solid var(--line)' }}>
+                📅 {item.serie}
+              </span>
+            )}
             {badge && !isDejaFait && (
               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: tab.bg, color: tab.color }}>
                 {badge}
@@ -344,7 +354,10 @@ function BanqueList({ banque, items, setItems, searchQuery = '', filterStatus = 
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Titre de la vidéo" /></label>
             <label><span className="text-xs text-gray-500 block mb-1">Format</span>
               <input value={form.format || ''} onChange={e => setForm(f => ({ ...f, format: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Ex: Liste/Talking head" /></label>
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Ex: Liste/Talking head, Tuto/Défi, Format court" /></label>
+            <label><span className="text-xs text-gray-500 block mb-1">Série hebdo (optionnel)</span>
+              <input value={form.serie || ''} onChange={e => setForm(f => ({ ...f, serie: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Ex: Lundi Technique" /></label>
             <label><span className="text-xs text-gray-500 block mb-1">Discipline</span>
               <input value={form.discipline || ''} onChange={e => setForm(f => ({ ...f, discipline: e.target.value }))}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="BJJ, MMA, Muay Thai..." /></label>

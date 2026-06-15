@@ -24,4 +24,27 @@ export const tiktokInitial = [
   { id: 23, titre: "Top 3 des techniques défensives les plus efficaces en boxe", format: "Liste/Talking head", discipline: "Boxe", priorite: "FAIBLE", statut: "a_tourner" },
   { id: 24, titre: "Pourquoi Conor McGregor ne reviendra jamais au même niveau", format: "Opinion/Talking head", discipline: "MMA", priorite: "FAIBLE", statut: "a_tourner" },
   { id: 25, titre: "Le leg kick : arme secrète des champions", format: "Educatif/Talking head", discipline: "MMA", priorite: "FAIBLE", statut: "a_tourner" },
+
+  // ── Séries thématiques hebdomadaires ───────────────────────────────────────
+  { id: 26, titre: "Lundi Technique #1 : monter une triangle étape par étape", format: "Tuto/Défi", serie: "Lundi Technique", discipline: "BJJ", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 27, titre: "Lundi Technique #2 : le double leg propre en 3 temps", format: "Tuto/Défi", serie: "Lundi Technique", discipline: "MMA", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 28, titre: "Mercredi Mindset : gérer la peur avant un combat", format: "Talking head", serie: "Mercredi Mindset", discipline: "Tous", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 29, titre: "Mercredi Mindset : la routine mentale des champions", format: "Talking head", serie: "Mercredi Mindset", discipline: "Tous", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 30, titre: "Vendredi Débat : le grappling est-il plus important que le striking ?", format: "Débat", serie: "Vendredi Débat", discipline: "MMA", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 31, titre: "Vendredi Débat : se spécialiser tôt ou rester polyvalent ?", format: "Débat", serie: "Vendredi Débat", discipline: "Tous", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 32, titre: "Dimanche Analyse : décryptage du dernier main event UFC", format: "Analyse", serie: "Dimanche Analyse", discipline: "MMA", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 33, titre: "Dimanche Analyse : pourquoi ce finish était inévitable", format: "Analyse", serie: "Dimanche Analyse", discipline: "MMA", priorite: "MOYENNE", statut: "a_tourner" },
+
+  // ── Tutoriels interactifs & défis ──────────────────────────────────────────
+  { id: 34, titre: "Défi 7 jours : 50 montées de garde par jour, tu tiens ?", format: "Tuto/Défi", discipline: "BJJ", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 35, titre: "Reproduis cette combinaison de boxe et tague-moi", format: "Tuto/Défi", discipline: "Boxe", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 36, titre: "Le défi du débutant : ta première semaine de MMA", format: "Tuto/Défi", discipline: "MMA", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 37, titre: "Teste ta garde : ce drill en 60 secondes chrono", format: "Tuto/Défi", discipline: "BJJ", priorite: "FAIBLE", statut: "a_tourner" },
+
+  // ── Formats courts & dynamiques ────────────────────────────────────────────
+  { id: 38, titre: "POV : ton tout premier sparring", format: "Format court", discipline: "Tous", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 39, titre: "3 secondes pour deviner la soumission", format: "Format court", discipline: "BJJ", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 40, titre: "Avant / après 1 an de Muay Thai", format: "Format court", discipline: "Muay Thai", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 41, titre: "Le détail qui change tout sur ton jab", format: "Format court", discipline: "Boxe", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 42, titre: "Ce réflexe peut te sauver en clinch", format: "Format court", discipline: "MMA", priorite: "FAIBLE", statut: "a_tourner" },
 ];
