@@ -16,6 +16,9 @@ body {
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  /* Disable double-tap-to-zoom (and the 300ms tap delay) without blocking
+     scroll/pinch — kills the "random zoom" when tapping fast / switching tabs. */
+  touch-action: manipulation;
 }
 
 #root {
@@ -34,14 +37,20 @@ input, textarea, select {
   font-family: inherit;
 }
 
-/* Dark-theme form fields */
+/* Dark-theme form fields.
+   color-scheme: dark makes ALL native controls (text inputs, textareas,
+   selects, date/time pickers) render with dark system chrome instead of the
+   default white — without it, text/textarea fields stayed white on the dark
+   sheet (only date/time were patched before). */
+html { color-scheme: dark; }
 input, textarea, select {
   color: var(--ink);
+  background-color: var(--surface-2);
+  /* ≥16px stops iOS Safari from auto-zooming when a field gets focus.
+     !important beats Tailwind's text-sm (14px) which would otherwise zoom. */
+  font-size: 16px !important;
 }
 input::placeholder, textarea::placeholder { color: var(--ink-3); }
-input[type="time"], input[type="date"] {
-  color-scheme: dark;
-}
 
 /* ── Dark-theme leverage: flip legacy light surfaces ──────────────────
    The codebase uses bg-white liberally for cards. Remap it to the dark
