@@ -1,10 +1,24 @@
 import { useState } from 'react';
-import { Target, Plus, Minus, Pencil, Trash2, Check } from 'lucide-react';
+import { Target, Plus, Minus, Pencil, Trash2, Check, Zap } from 'lucide-react';
 import Modal from './Modal';
 import { useJalons } from '../hooks/useJalons';
 import { JALON_CATEGORIES } from '../data/jalons';
+import { getMonthStats, getSportMonthStats, getSportQuarterCount } from '../utils/stats';
 
 const CATEGORIES = Object.keys(JALON_CATEGORIES);
+
+// Suivis automatiques : la progression est lue en direct depuis les données
+// réelles de l'app (journal). Le jalon devient alors non éditable à la main.
+const JALON_SOURCES = {
+  videos_mois:   { label: 'Vidéos publiées · ce mois',    compute: () => getMonthStats().tiktok },
+  seances_mois:  { label: 'Entraînements · ce mois',      compute: () => getSportMonthStats().total },
+  seances_trim:  { label: 'Entraînements · ce trimestre', compute: () => getSportQuarterCount() },
+  missions_mois: { label: 'Missions accomplies · ce mois', compute: () => {
+    const m = getMonthStats();
+    return m.tiktok + m.fightfocus + m.marque +
+      Object.values(m.projets || {}).reduce((a, b) => a + (b.count || 0), 0);
+  } },
+};
 
 // Days remaining until a deadline (null if none). Negative = overdue.
 function daysUntil(dateStr) {
@@ -31,7 +45,9 @@ function DeadlineChip({ echeance }) {
 function JalonCard({ jalon, onStep, onEdit, onDelete }) {
   const color = JALON_CATEGORIES[jalon.categorie]?.color || 'var(--ink-3)';
   const cible = jalon.cible || 1;
-  const actuel = Math.max(0, jalon.actuel || 0);
+  const sourceDef = jalon.source ? JALON_SOURCES[jalon.source] : null;
+  const auto = !!sourceDef;
+  const actuel = auto ? sourceDef.compute() : Math.max(0, jalon.actuel || 0);
   const pct = Math.min(100, Math.round((actuel / cible) * 100));
   const done = actuel >= cible;
 
@@ -56,37 +72,43 @@ function JalonCard({ jalon, onStep, onEdit, onDelete }) {
       </p>
 
       <div className="flex items-center gap-2 mt-2">
-        <button
-          onClick={() => onStep(jalon.id, -1)}
-          disabled={actuel <= 0}
-          className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 disabled:opacity-30"
-          style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--ink-2)' }}
-        >
-          <Minus size={14} />
-        </button>
+        {!auto && (
+          <button
+            onClick={() => onStep(jalon.id, -1)}
+            disabled={actuel <= 0}
+            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 disabled:opacity-30"
+            style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--ink-2)' }}
+          >
+            <Minus size={14} />
+          </button>
+        )}
 
         <div className="flex-1">
           <div style={{ height: 6, borderRadius: 4, background: 'var(--surface-2)', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${pct}%`, background: color, transition: 'width 400ms ease' }} />
           </div>
-          <p className="text-[10px] mt-1 text-center" style={{ color: 'var(--ink-3)' }}>
+          <p className="text-[10px] mt-1 text-center flex items-center justify-center gap-1" style={{ color: 'var(--ink-3)' }}>
+            {auto && <Zap size={9} style={{ color }} />}
             {actuel} / {cible} {jalon.unite || ''} · {pct}%
+            {auto && <span style={{ color: 'var(--ink-3)' }}>· auto</span>}
           </p>
         </div>
 
-        <button
-          onClick={() => onStep(jalon.id, 1)}
-          className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ background: color, color: '#fff' }}
-        >
-          <Plus size={14} />
-        </button>
+        {!auto && (
+          <button
+            onClick={() => onStep(jalon.id, 1)}
+            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ background: color, color: '#fff' }}
+          >
+            <Plus size={14} />
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-const EMPTY_FORM = { titre: '', categorie: 'Contenu', cible: 1, actuel: 0, unite: '', echeance: '' };
+const EMPTY_FORM = { titre: '', categorie: 'Contenu', cible: 1, actuel: 0, unite: '', echeance: '', source: '' };
 
 export default function Jalons() {
   const [jalons, setJalons] = useJalons();
@@ -95,7 +117,11 @@ export default function Jalons() {
   const [form, setForm] = useState(EMPTY_FORM);
 
   const list = jalons || [];
-  const reached = list.filter(j => (j.actuel || 0) >= (j.cible || 1)).length;
+  const jalonValue = (j) => {
+    const def = j.source ? JALON_SOURCES[j.source] : null;
+    return def ? def.compute() : Math.max(0, j.actuel || 0);
+  };
+  const reached = list.filter(j => jalonValue(j) >= (j.cible || 1)).length;
 
   const stepProgress = (id, delta) => {
     setJalons(prev => prev.map(j => j.id === id
@@ -115,6 +141,7 @@ export default function Jalons() {
       actuel: Math.max(0, Number(form.actuel) || 0),
       unite: form.unite.trim(),
       echeance: form.echeance || '',
+      source: form.source || '',
     };
     if (editJalon) {
       setJalons(prev => prev.map(j => j.id === editJalon.id ? { ...j, ...cleaned } : j));
@@ -188,12 +215,29 @@ export default function Jalons() {
               {CATEGORIES.map(c => <option key={c}>{c}</option>)}
             </select>
           </label>
+          <label>
+            <span className="text-xs text-gray-500 block mb-1">Suivi</span>
+            <select value={form.source || ''} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+              <option value="">Manuel (boutons +/−)</option>
+              {Object.entries(JALON_SOURCES).map(([key, s]) => (
+                <option key={key} value={key}>⚡ {s.label}</option>
+              ))}
+            </select>
+            {form.source && (
+              <span className="text-[10px] mt-1 block" style={{ color: 'var(--ink-3)' }}>
+                Compté automatiquement depuis ton activité.
+              </span>
+            )}
+          </label>
           <div className="flex gap-3">
-            <label className="flex-1">
-              <span className="text-xs text-gray-500 block mb-1">Actuel</span>
-              <input type="number" min="0" value={form.actuel} onChange={e => setForm(f => ({ ...f, actuel: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-            </label>
+            {!form.source && (
+              <label className="flex-1">
+                <span className="text-xs text-gray-500 block mb-1">Actuel</span>
+                <input type="number" min="0" value={form.actuel} onChange={e => setForm(f => ({ ...f, actuel: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              </label>
+            )}
             <label className="flex-1">
               <span className="text-xs text-gray-500 block mb-1">Cible</span>
               <input type="number" min="1" value={form.cible} onChange={e => setForm(f => ({ ...f, cible: e.target.value }))}

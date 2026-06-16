@@ -1,4 +1,5 @@
 import { tiktokInitial } from '../data/tiktok';
+import { marqueInitial } from '../data/marque';
 
 // Seed items shipped after the first release use IDs >= this threshold so they
 // never collide with user-created items (which auto-increment from the original
@@ -47,10 +48,34 @@ function mergeBankSeed(key, seed) {
   catch { /* ignore */ }
 }
 
-/** Run all banque seed merges. Safe to call once at startup. */
+// One-time migration: attach automatic tracking to the original seed jalons
+// (#1 « vidéos ce mois », #3 « entraînements ce trimestre ») for users who
+// already had them stored as manual counters. Runs once, then never again.
+function migrateJalonSources() {
+  const FLAG = 'fk_jalons_src_migrated';
+  if (localStorage.getItem(FLAG)) return;
+  const SOURCE_BY_ID = { 1: 'videos_mois', 3: 'seances_trim' };
+  let jalons;
+  try { jalons = JSON.parse(localStorage.getItem('fk_jalons')); } catch { jalons = null; }
+  if (Array.isArray(jalons)) {
+    let changed = false;
+    const next = jalons.map(j => {
+      if (!j.source && SOURCE_BY_ID[j.id]) { changed = true; return { ...j, source: SOURCE_BY_ID[j.id] }; }
+      return j;
+    });
+    if (changed) {
+      try { localStorage.setItem('fk_jalons', JSON.stringify(next)); } catch { /* ignore */ }
+    }
+  }
+  try { localStorage.setItem(FLAG, '1'); } catch { /* ignore */ }
+}
+
+/** Run all banque seed merges + migrations. Safe to call once at startup. */
 export function mergeNewSeeds() {
   try {
     if (typeof localStorage === 'undefined') return;
     mergeBankSeed('tiktok', tiktokInitial);
+    mergeBankSeed('marque', marqueInitial);
+    migrateJalonSources();
   } catch { /* localStorage unavailable */ }
 }

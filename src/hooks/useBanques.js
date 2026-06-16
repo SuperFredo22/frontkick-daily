@@ -3,12 +3,15 @@ import { tiktokInitial } from '../data/tiktok';
 import { fightfocusInitial } from '../data/fightfocus';
 import { marqueInitial } from '../data/marque';
 
-const INACTIVE_STATUTS = ['publiee', 'fait', 'deja_fait'];
 const ACTIVE_STATUTS = {
   tiktok: ['a_tourner'],
   fightfocus: ['a_faire'],
   marque: ['a_faire'],
 };
+
+// Une série TikTok mise en avant : son prochain item actif passe AVANT toute
+// autre suggestion TikTok du jour (concept « un sport méconnu par jour »).
+export const PRIORITY_SERIE = 'Sport du jour';
 
 export function useTikTok() {
   return useStorage('tiktok', tiktokInitial);
@@ -66,10 +69,17 @@ export function useAllBanques() {
     else items = marque;
 
     const activeStatut = ACTIVE_STATUTS[banque];
-    return items.find(item =>
+    const isActive = (item) =>
       activeStatut.includes(item.statut) &&
-      !skippedToday.includes(`${banque}_${item.id}`)
-    ) || null;
+      !skippedToday.includes(`${banque}_${item.id}`);
+
+    // Priorité : pour TikTok, on sert d'abord le prochain « Sport du jour ».
+    if (banque === 'tiktok') {
+      const prioritaire = items.find(item => item.serie === PRIORITY_SERIE && isActive(item));
+      if (prioritaire) return prioritaire;
+    }
+
+    return items.find(isActive) || null;
   };
 
   const hasAvailableItems = (banque) => {

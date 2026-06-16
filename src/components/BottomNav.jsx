@@ -11,6 +11,7 @@ const TABS = [
 
 const COMPOSE_OPTIONS = [
   { id: 'tiktok',     emoji: '🎬', label: 'Idée TikTok',         color: 'var(--red)' },
+  { id: 'video_tournee', emoji: '📹', label: 'Vidéo tournée',     color: 'var(--green)' },
   { id: 'fightfocus', emoji: '🎯', label: 'Mission FightFocus',  color: 'var(--cyan)' },
   { id: 'marque',     emoji: '👕', label: 'Action Marque',       color: 'var(--orange)' },
   { id: 'divider' },
