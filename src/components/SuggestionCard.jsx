@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import Card from './Card';
 import Modal from './Modal';
-
-const BANQUE_CONFIG = {
-  tiktok:     { label: 'TikTok',     color: 'var(--red)',    bg: 'var(--red-50)',      emoji: '🎬' },
-  fightfocus: { label: 'FightFocus', color: 'var(--cyan)',   bg: 'var(--cyan-soft)',   emoji: '🌐' },
-  marque:     { label: 'Marque',     color: 'var(--orange)', bg: 'var(--orange-soft)', emoji: '👕' },
-};
+import { BANQUE_CONFIG } from '../data/banques.config';
 
 function getLabel(banque, item, config) {
   if (config?.getLabel) return config.getLabel(item);

@@ -50,11 +50,3 @@ export function getStorage(key) {
     return null;
   }
 }
-
-export function setStorage(key, value) {
-  try {
-    localStorage.setItem(`fk_${key}`, JSON.stringify(value));
-  } catch (e) {
-    console.error('localStorage write error', e);
-  }
-}

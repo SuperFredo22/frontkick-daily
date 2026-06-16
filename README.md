@@ -1,16 +1,48 @@
-# React + Vite
+# Frontkick Daily
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+PWA de discipline quotidienne qui transforme tes habitudes (contenu, sport,
+prières, etc.) en **progression de combattant** : XP, niveaux, grades, séries
+de victoires et badges. Tout est stocké **en local** (localStorage), avec un
+coach IA optionnel et des notifications push.
 
-Currently, two official plugins are available:
+## Démarrage
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev       # serveur de dev Vite
+npm run build     # build de production (dossier dist/)
+npm run preview   # prévisualise le build
+npm run lint      # ESLint
+```
 
-## React Compiler
+## Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **React 19** + **Vite 8**
+- **Tailwind CSS 3** + tokens CSS maison (thème sombre) — voir `src/styles/tokens.css`
+- **Recharts** (graphiques de stats), **@dnd-kit** (réordonnancement), **lucide-react** (icônes)
+- **Vercel** pour l'hébergement + fonctions serverless (`api/`) : coach IA (Perplexity),
+  notifications push (web-push + `@vercel/blob`)
 
-## Expanding the ESLint configuration
+## Organisation du repo
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```
+api/                 Fonctions serverless Vercel (coach IA, push, cron, health)
+public/              Manifeste PWA, service worker, icônes
+src/
+  pages/             Écrans principaux (Aujourdhui, Agenda, Stats, Banques, Coach)
+  components/        UI réutilisable (Modal, HUD, SuggestionCard, sport/, …)
+  hooks/             Logique d'état réutilisable (useStorage, useJournal, useLongPress, …)
+  data/              Données de seed + config (banques, séances, jalons)
+  utils/             Logique pure (gamification, stats, dates, notifications)
+  styles/            tokens.css (variables de thème)
+  index.css          Styles globaux + thème des champs de formulaire
+```
+
+Pour le détail de l'architecture et la dette technique connue, voir
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+## Données & sauvegarde
+
+Toutes les données vivent dans `localStorage` (préfixe `fk_`). Il n'y a pas
+encore de synchronisation cloud : **exporte régulièrement** tes données depuis
+Réglages → Sauvegarde (un rappel s'affiche après 7 jours sans export).

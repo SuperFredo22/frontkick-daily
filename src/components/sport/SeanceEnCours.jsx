@@ -12,7 +12,7 @@ function playBeep(freq = 880, dur = 0.3) {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + dur);
-  } catch (e) {}
+  } catch { /* audio unavailable */ }
 }
 
 function fmt(sec) {
@@ -75,7 +75,7 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
       try {
         wl = await navigator.wakeLock.request('screen');
         wl.addEventListener('release', () => { wl = null; });
-      } catch (e) {}
+      } catch { /* wake lock unsupported */ }
     };
 
     const onVisible = () => {

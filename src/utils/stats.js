@@ -5,23 +5,6 @@ export function getJournalForDate(dateStr) {
   return getStorage(`journal_${dateStr}`) || null;
 }
 
-export function computeStreak() {
-  let streak = 0;
-  const today = new Date();
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const journal = getJournalForDate(formatDate(d));
-    const hasDone = journal?.taches?.some(t => t.statut === 'fait');
-    if (hasDone) {
-      streak++;
-    } else if (i > 0) {
-      break;
-    }
-  }
-  return streak;
-}
-
 export function getMonthStats() {
   const start = getMonthStart();
   const today = new Date();

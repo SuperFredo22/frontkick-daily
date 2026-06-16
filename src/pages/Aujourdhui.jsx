@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Menu, ChevronRight } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { formatDateFR, formatDate, today, yesterday } from '../utils/date';
 import { useJournal, useReporteAujourdhui } from '../hooks/useJournal';
 import { useAllBanques } from '../hooks/useBanques';
@@ -9,6 +9,8 @@ import { getConsecutiveNoSportDays } from '../utils/stats';
 import { useProgression } from '../hooks/useProgression';
 import { XP, dayXP, mantraOfTheDay, yesterdayMissed, protectStreak } from '../utils/gamification';
 import { newlyUnlockedByLevel } from '../utils/unlockables';
+import { useLongPress } from '../hooks/useLongPress';
+import { banqueColor } from '../data/banques.config';
 import SuggestionCard from '../components/SuggestionCard';
 import HUD from '../components/HUD';
 import DailyObjective from '../components/DailyObjective';
@@ -24,9 +26,6 @@ function makeItemLabel(banque, item) {
   if (item.code) return `${item.code} — ${item.description}`;
   return item.description;
 }
-
-const BANQUE_EMOJI = { tiktok: '🎬', fightfocus: '🌐', marque: '👕' };
-const BANQUE_COLOR = { tiktok: 'var(--red)', fightfocus: 'var(--cyan)', marque: 'var(--orange)' };
 
 // Actions rapides pour loguer en un tap une "action importante" hors-liste —
 // dont le travail de refonte de l'app. Chacune devient une action enregistrée
@@ -47,72 +46,14 @@ function backupReminderState() {
   return { last, days };
 }
 
-// Long-press hook: touch events on mobile (iOS doesn't cancel them for context-menu detection),
-// pointer events on desktop. delay ms = long press threshold.
-function useLongPress(onLongPress, onShortPress, delay = 500) {
-  const timer = useRef(null);
-  const fired = useRef(false);
-  const touchHandled = useRef(false);
-
-  const startTimer = () => {
-    fired.current = false;
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      fired.current = true;
-      onLongPress?.();
-    }, delay);
-  };
-
-  return {
-    // ── Mobile (touch) ────────────────────────────────────────────────────
-    // iOS Safari fires pointercancel on its own long-press detection;
-    // touchcancel does NOT fire for contextmenu, so touch events survive long enough.
-    onTouchStart: () => {
-      touchHandled.current = false;
-      startTimer();
-    },
-    onTouchEnd: (e) => {
-      touchHandled.current = true;
-      e.preventDefault(); // block synthesized mouse/click events
-      if (!fired.current) {
-        clearTimeout(timer.current);
-        onShortPress?.();
-      }
-      fired.current = false;
-    },
-    onTouchCancel: () => {
-      clearTimeout(timer.current);
-      fired.current = false;
-    },
-    // ── Desktop (mouse / pointer) ─────────────────────────────────────────
-    onPointerDown: (e) => {
-      if (e.pointerType === 'touch') return;
-      startTimer();
-    },
-    onPointerUp: (e) => {
-      if (e.pointerType === 'touch') return;
-      if (!fired.current) clearTimeout(timer.current);
-    },
-    onPointerLeave: (e) => {
-      if (e.pointerType === 'touch') return;
-      if (!fired.current) clearTimeout(timer.current);
-    },
-    onClick: () => {
-      if (touchHandled.current) { touchHandled.current = false; return; }
-      if (!fired.current) onShortPress?.();
-      fired.current = false;
-    },
-  };
-}
-
 export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSettings, onNavigate }) {
   const [viewDate, setViewDate] = useState(today());
   const isYesterday = formatDate(viewDate) !== formatDate(today());
 
   const [journal, setJournal] = useJournal(viewDate);
   const [reporte, setReporte] = useReporteAujourdhui(viewDate);
-  const [agenda, setAgenda] = useAgenda();
-  const { markDone, markUndone, getNextItem, hasAvailableItems } = useAllBanques();
+  const [, setAgenda] = useAgenda();
+  const { markDone, markUndone, getNextItem } = useAllBanques();
   const [projets, setProjets] = useProjets();
 
   // Combatant progression — recomputed whenever today's data changes so the
@@ -210,7 +151,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     markDone(banque, item.id);
     const label = makeItemLabel(banque, item);
     addJournalTache({ id: item.id, banque, label, statut: 'fait', heure: timeSlot });
-    addAgendaEvent(label, banque, BANQUE_COLOR[banque], timeSlot);
+    addAgendaEvent(label, banque, banqueColor(banque), timeSlot);
   };
 
   const handleReporte = (banque, item) => {
@@ -352,6 +293,8 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     setTimeout(() => { blockModalCloseRef.current = false; }, 500);
   };
 
+  const hab = journal?.habitudes || { prieres: 0, sport: false, cigarettes: 0, note: '' };
+
   const prieresLongPress = useLongPress(
     () => openWithBlock(() => { setEditPrieres(hab.prieres || 0); setShowPrieresEdit(true); }),
     () => updateHabitude('prieres', (hab.prieres || 0) + 1),
@@ -368,7 +311,6 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   // (> 7 j) n'a été fait, on invite à exporter pour ne plus jamais tout perdre.
   const { last: lastBackup, days: daysSinceBackup } = backupReminderState();
   const needsBackup = !isYesterday && !backupDismissed && (prog.trackedDays || 0) >= 2 && daysSinceBackup >= 7;
-  const hab = journal?.habitudes || { prieres: 0, sport: false, cigarettes: 0, note: '' };
   const tachesFaites    = (journal?.taches || []).filter(t => t.statut === 'fait');
   const tachesReportees = (journal?.taches || []).filter(t => t.statut === 'reporte');
 
@@ -716,12 +658,6 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           </p>
           <Card>
             {tachesFaites.map((t, i) => {
-              const color = t.banque === 'tiktok' ? 'var(--red)'
-                : t.banque === 'fightfocus' ? 'var(--cyan)'
-                : t.banque === 'marque' ? 'var(--orange)'
-                : t.banque === 'projet'
-                ? (projets.find(p => p.id === t.projetId)?.couleur || 'var(--ink-3)')
-                : 'var(--ink-3)';
               return (
                 <div key={i} className="flex items-center gap-2 mb-2">
                   <span
@@ -921,7 +857,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       {focusOpen && hero && (
         <FocusOverlay
           label={hero.banque === 'projet' ? hero.item.description : makeItemLabel(hero.banque, hero.item)}
-          color={hero.banque === 'projet' ? (hero.projet?.couleur || 'var(--red)') : (BANQUE_COLOR[hero.banque] || 'var(--red)')}
+          color={hero.banque === 'projet' ? (hero.projet?.couleur || 'var(--red)') : banqueColor(hero.banque)}
           onComplete={() => {
             setFocusOpen(false);
             handleSuggestionFait(hero, null);
