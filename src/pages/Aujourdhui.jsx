@@ -12,11 +12,13 @@ import { newlyUnlockedByLevel } from '../utils/unlockables';
 import { useLongPress } from '../hooks/useLongPress';
 import { banqueColor } from '../data/banques.config';
 import SuggestionCard from '../components/SuggestionCard';
+import VictoiresDuJour from '../components/today/VictoiresDuJour';
+import ActionsImportantes from '../components/today/ActionsImportantes';
+import BackupBanner from '../components/today/BackupBanner';
 import HUD from '../components/HUD';
 import DailyObjective from '../components/DailyObjective';
 import FocusOverlay from '../components/FocusOverlay';
 import { XpFlash, LevelUpOverlay } from '../components/RewardFx';
-import Card from '../components/Card';
 import SportModule from '../components/sport/SportModule';
 import Modal from '../components/Modal';
 import LogVideoModal from '../components/LogVideoModal';
@@ -27,17 +29,6 @@ function makeItemLabel(banque, item) {
   if (item.code) return `${item.code} — ${item.description}`;
   return item.description;
 }
-
-// Actions rapides pour loguer en un tap une "action importante" hors-liste —
-// dont le travail de refonte de l'app. Chacune devient une action enregistrée
-// qui rapporte de l'XP et alimente les stats du mois (et le jalon "Actions
-// importantes" si tu en crées un).
-const ACTIONS_RAPIDES = [
-  "🛠️ Travail sur l'app",
-  '📚 Apprentissage',
-  '🤝 Networking / contact',
-  '🧹 Admin & organisation',
-];
 
 // État de la dernière sauvegarde (export). Isolé hors du render pour garder
 // celui-ci pur. Renvoie le timestamp et le nombre de jours écoulés.
@@ -79,7 +70,6 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     prevLevelRef.current = prog.level;
   }, [prog.level, prog.rank]);
 
-  const [bonusInput, setBonusInput] = useState('');
   const [showBonusInput, setShowBonusInput] = useState(false);
   const [heroFading, setHeroFading] = useState(false);
   const [showSportSheet, setShowSportSheet] = useState(false);
@@ -250,19 +240,14 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     setJournal(prev => ({ ...prev, habitudes: { ...(prev.habitudes || {}), [field]: value } }));
   };
 
-  const addBonus = () => {
-    if (!bonusInput.trim()) return;
-    setJournal(prev => ({ ...prev, bonus: [...(prev.bonus || []), { id: Date.now(), texte: bonusInput.trim() }] }));
-    setBonusInput('');
-    setShowBonusInput(false);
+  // Log an "action importante" (free text or quick chip); both earn bonus XP.
+  const addBonus = (texte) => {
+    const t = (texte || '').trim();
+    if (!t) return;
+    setJournal(prev => ({ ...prev, bonus: [...(prev.bonus || []), { id: Date.now(), texte: t }] }));
     flashXp(XP.bonus);
   };
-
-  // Log instantané d'une action importante (chip) — même récompense qu'un bonus.
-  const addBonusQuick = (texte) => {
-    setJournal(prev => ({ ...prev, bonus: [...(prev.bonus || []), { id: Date.now(), texte }] }));
-    flashXp(XP.bonus);
-  };
+  const addBonusQuick = addBonus;
 
   const removeBonus = (id) => {
     setJournal(prev => ({ ...prev, bonus: (prev.bonus || []).filter(b => b.id !== id) }));
@@ -409,32 +394,12 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       )}
 
       {/* Rappel de sauvegarde — évite de reperdre ses données */}
-      {needsBackup && (
-        <div className="mx-4 mt-2 rounded-xl px-4 py-3 flex items-center gap-3" style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
-          <span className="text-xl">💾</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Sauvegarde tes données</p>
-            <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
-              {lastBackup ? 'Dernier export il y a plus d\'une semaine.' : 'Aucune sauvegarde encore — protège ta progression.'}
-            </p>
-          </div>
-          <button
-            onClick={() => onOpenSettings?.()}
-            className="btn-press text-xs font-semibold px-3 py-1.5 rounded-lg text-white shrink-0"
-            style={{ background: 'var(--red)' }}
-          >
-            Exporter
-          </button>
-          <button
-            onClick={() => setBackupDismissed(true)}
-            className="btn-press text-base px-1 shrink-0"
-            style={{ color: 'var(--ink-3)' }}
-            aria-label="Ignorer"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      <BackupBanner
+        show={needsBackup}
+        hasBackup={!!lastBackup}
+        onExport={() => onOpenSettings?.()}
+        onDismiss={() => setBackupDismissed(true)}
+      />
 
       {/* ── Disciplines strip ──────────────────────────────────────────── */}
       <p className="uppercase tracking-widest text-[11px] font-bold px-5 mt-5 mb-2" style={{ color: 'var(--ink-3)' }}>
@@ -574,133 +539,25 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       )}
 
       {/* ── Autres actions importantes ──────────────────────────────────── */}
-      <section className="px-4 mt-6">
-        <div className="flex items-center justify-between mb-1">
-          <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>
-            Autres actions importantes
-          </p>
-          {!showBonusInput && (
-            <button
-              onClick={() => setShowBonusInput(true)}
-              className="w-7 h-7 rounded-full text-white text-lg font-bold flex items-center justify-center btn-press"
-              style={{ background: 'var(--red)', fontSize: 18, lineHeight: 1 }}
-            >
-              +
-            </button>
-          )}
-        </div>
-        <p className="text-[11px] mb-3" style={{ color: 'var(--ink-3)' }}>
-          Tout travail qui compte — dont la refonte de cette app. +{XP.bonus} XP chacun.
-        </p>
-
-        {/* Actions rapides — un tap = loguée */}
-        {!showBonusInput && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {ACTIONS_RAPIDES.map(a => (
-              <button
-                key={a}
-                onClick={() => addBonusQuick(a)}
-                className="btn-press text-xs font-medium px-3 py-1.5 rounded-full"
-                style={{ background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--ink-2)' }}
-              >
-                {a}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {showBonusInput && (
-          <div className="mb-3" style={{ background: 'var(--surface)', borderRadius: 14, padding: '10px 12px', boxShadow: 'var(--shadow-card)' }}>
-            <input
-              autoFocus value={bonusInput}
-              onChange={e => setBonusInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') addBonus(); if (e.key === 'Escape') { setShowBonusInput(false); setBonusInput(''); } }}
-              placeholder="Ce que tu as accompli..."
-              className="w-full text-sm mb-2"
-              style={{ border: 'none', outline: 'none', background: 'transparent', color: 'var(--ink)', fontSize: 14 }}
-            />
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => { setShowBonusInput(false); setBonusInput(''); }}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium btn-press"
-                style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}
-              >
-                Annuler
-              </button>
-              <button
-                onClick={addBonus}
-                disabled={!bonusInput.trim()}
-                className="px-3 py-1.5 rounded-lg text-white text-sm font-medium btn-press disabled:opacity-40"
-                style={{ background: 'var(--red)' }}
-              >
-                Ajouter
-              </button>
-            </div>
-          </div>
-        )}
-
-        {(journal?.bonus || []).length === 0 && !showBonusInput && (
-          <p className="text-sm italic" style={{ color: 'var(--ink-3)' }}>Choisis une action rapide ci-dessus ou ajoute la tienne.</p>
-        )}
-        <div className="flex flex-col gap-2">
-          {(journal?.bonus || []).map(b => (
-            <div key={b.id} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-card">
-              <span className="text-sm" style={{ color: 'var(--green)' }}>✓</span>
-              <span className="text-sm flex-1" style={{ color: 'var(--ink-2)' }}>{b.texte}</span>
-              <button onClick={() => removeBonus(b.id)} className="text-gray-300 px-1 active:text-red-400">🗑️</button>
-            </div>
-          ))}
-        </div>
-      </section>
+      <ActionsImportantes
+        bonus={journal?.bonus || []}
+        showInput={showBonusInput}
+        onOpen={() => setShowBonusInput(true)}
+        onClose={() => setShowBonusInput(false)}
+        onAdd={addBonus}
+        onAddQuick={addBonusQuick}
+        onRemove={removeBonus}
+      />
 
       {/* ── Déjà fait aujourd'hui ──────────────────────────────────────── */}
-      {(tachesFaites.length > 0 || tachesReportees.length > 0) && (
-        <section className="px-4 mt-6 mb-2">
-          <p className="uppercase tracking-widest text-[11px] font-bold mb-3" style={{ color: 'var(--ink-3)' }}>
-            Victoires du jour · {tachesFaites.length}
-          </p>
-          <Card>
-            {tachesFaites.map((t, i) => {
-              return (
-                <div key={i} className="flex items-center gap-2 mb-2">
-                  <span
-                    className="shrink-0 flex items-center justify-center"
-                    style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--green-soft)' }}
-                  >
-                    <span style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700 }}>✓</span>
-                  </span>
-                  <span className="text-[13px] flex-1 leading-snug" style={{ color: 'var(--ink-2)', textDecoration: 'line-through', textDecorationColor: '#CBD5E1' }}>
-                    {t.label}
-                  </span>
-                  <button
-                    onClick={() => handleUndoFait(t)}
-                    className="text-xs px-1.5 py-0.5 rounded btn-press shrink-0"
-                    style={{ background: 'var(--line-2)', color: 'var(--ink-3)', fontSize: 11 }}
-                  >
-                    ↩️
-                  </button>
-                </div>
-              );
-            })}
-            {tachesReportees.length > 0 && (
-              <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--line)' }}>
-                <p className="text-[10px] font-semibold mb-1.5" style={{ color: 'var(--ink-3)' }}>🔄 Reporté</p>
-                {tachesReportees.map((t, i) => (
-                  <div key={i} className="flex items-start gap-2 mb-1">
-                    <span className="text-xs mt-0.5" style={{ color: 'var(--line)' }}>●</span>
-                    <span className="text-xs leading-snug" style={{ color: 'var(--ink-3)' }}>{t.label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="mt-3 pt-3 border-t flex gap-4 text-xs" style={{ borderColor: 'var(--line)', color: 'var(--ink-3)' }}>
-              <span>🙏 {hab.prieres || 0}</span>
-              <span>{sportDone ? `🥊 ${sportLabel || '✓'}` : '🥊 —'}</span>
-              <span>🚬 {hab.cigarettes || 0}</span>
-            </div>
-          </Card>
-        </section>
-      )}
+      <VictoiresDuJour
+        tachesFaites={tachesFaites}
+        tachesReportees={tachesReportees}
+        hab={hab}
+        sportDone={sportDone}
+        sportLabel={sportLabel}
+        onUndoFait={handleUndoFait}
+      />
 
       {/* ── Sport bottom sheet ─────────────────────────────────────────── */}
       {showSportSheet && (
