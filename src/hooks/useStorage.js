@@ -37,7 +37,7 @@ export function useStorage(key, defaultValue) {
       }
       return next;
     });
-  }, [prefixedKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [prefixedKey]);
 
   return [value, setValueAndPersist];
 }

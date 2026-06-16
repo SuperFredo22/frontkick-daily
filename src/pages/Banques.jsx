@@ -733,14 +733,17 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
   const [marque, setMarque] = useMarque();
   const [projets, setProjets] = useProjets();
 
+  // One-shot compose command from the parent (FAB): switch to the right tab.
+  // setState-in-effect is intentional (it's the command's side effect); the
+  // command is consumed immediately so the effect doesn't loop.
   useEffect(() => {
     if (!pendingCompose) return;
     if (['tiktok', 'fightfocus', 'marque', 'projets'].includes(pendingCompose)) {
-      setActiveTab(pendingCompose);
+      setActiveTab(pendingCompose); // eslint-disable-line react-hooks/set-state-in-effect
       setFilterStatus('all');
       onPendingConsumed?.();
     }
-  }, [pendingCompose]);
+  }, [pendingCompose, onPendingConsumed]);
 
   const setters = { tiktok: setTiktok, fightfocus: setFightFocus, marque: setMarque };
   const data = { tiktok, fightfocus, marque };

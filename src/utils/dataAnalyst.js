@@ -144,7 +144,7 @@ export function analyzeData() {
         const s = item.statut || item.status || '';
         return s !== 'fait' && s !== 'publiee';
       }).length;
-    } catch {}
+    } catch { /* skip malformed banque entry */ }
   });
 
   // ── Projets ────────────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ export function analyzeData() {
         projetsSummary.push({ nom: p.nom || p.titre || 'Projet', done, total: tasks.length, pending });
       }
     });
-  } catch {}
+  } catch { /* skip malformed projets */ }
 
   // ── Alerts ────────────────────────────────────────────────────────────────
   const alerts = [];

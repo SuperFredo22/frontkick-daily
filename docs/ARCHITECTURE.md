@@ -63,11 +63,17 @@ prochaines passes.
 - Pas de TypeScript : les formes d'objets (journal, tâche, RDV) sont implicites.
   Des JSDoc `@typedef` sur les structures clés aideraient déjà beaucoup.
 
-### Correctness (lint encore signalé)
-- `Aujourdhui.jsx:~119` — `setState` synchrone dans un `useEffect` (overlay de
-  level-up). Fonctionne mais peut provoquer des rendus en cascade.
-- Effet `pendingCompose` : dépendances incomplètes (`onPendingConsumed`).
-- Lancer `npm run lint` avant chaque PR ; viser zéro erreur progressivement.
+### Correctness (lint : 0 erreur ✅)
+`npm run lint` passe désormais sans erreur ni avertissement. À maintenir avant
+chaque PR. Quelques `eslint-disable` ciblés et **justifiés** subsistent là où la
+règle produit un faux positif :
+- `Aujourdhui.jsx` / `Banques.jsx` : effets « commande one-shot » (`pendingCompose`
+  envoyé par le parent) — le `setState` est l'effet voulu de la commande.
+- `sport/SeanceEnCours.jsx` : minuterie d'entraînement (refs horodatées +
+  bips audio). `Date.now()` à l'init de ref et `setState` de fin de minuterie
+  sont intentionnels ; ne pas refactorer sans tests sur le timer.
+- Les stats (`Stats.jsx`) sont calculées via des initialiseurs `useState`
+  paresseux (plus d'effet de chargement).
 
 ### Sécurité
 - **Clé API Perplexity côté client** : stockée en `localStorage` et envoyée au

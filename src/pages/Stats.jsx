@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
 import * as Icons from 'lucide-react';
 import { Flame, Trophy, Lock } from 'lucide-react';
@@ -202,23 +202,16 @@ function RewardsSection({ prog }) {
 
 export default function Stats() {
   const [prog] = useProgression();
-  const [monthStats, setMonthStats] = useState({ tiktok: 0, fightfocus: 0, marque: 0, projets: {} });
-  const [daily, setDaily] = useState([]);
-  const [cigFree, setCigFree] = useState(0);
+  // Stats are derived from localStorage and computed once on mount via lazy
+  // initialisers — no effect needed, and no flash of empty defaults.
+  const [monthStats] = useState(getMonthStats);
+  const [daily] = useState(getLast30DaysStats);
+  const [cigFree] = useState(getCigaretteFreeDays);
   const [detailDate, setDetailDate] = useState(null);
   const [detailJournal, setDetailJournal] = useState(null);
-  const [sportMonth, setSportMonth] = useState({ club: 0, gym: 0, maison: 0, autre: 0, total: 0, totalDuree: 0, topType: null });
-  const [sportStreak, setSportStreak] = useState(0);
-  const [sportDaily, setSportDaily] = useState([]);
-
-  useEffect(() => {
-    setMonthStats(getMonthStats());
-    setDaily(getLast30DaysStats());
-    setCigFree(getCigaretteFreeDays());
-    setSportMonth(getSportMonthStats());
-    setSportStreak(computeSportStreak());
-    setSportDaily(getSportLast30Days());
-  }, []);
+  const [sportMonth] = useState(getSportMonthStats);
+  const [sportStreak] = useState(computeSportStreak);
+  const [sportDaily] = useState(getSportLast30Days);
 
   const handleBarClick = (data) => {
     if (!data?.activePayload?.[0]?.payload?.date) return;

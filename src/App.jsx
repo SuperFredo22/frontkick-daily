@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import './index.css';
 import BottomNav from './components/BottomNav';
 import Aujourdhui from './pages/Aujourdhui';
@@ -6,7 +6,8 @@ import Agenda from './pages/Agenda';
 import Stats from './pages/Stats';
 import Banques from './pages/Banques';
 import Coach from './pages/Coach';
-import PinLock, { isUnlocked } from './components/PinLock';
+import PinLock from './components/PinLock';
+import { isUnlocked } from './utils/pinLock';
 import SettingsModal from './components/SettingsModal';
 
 export default function App() {
@@ -14,6 +15,10 @@ export default function App() {
   const [page, setPage] = useState('today');
   const [pendingCompose, setPendingCompose] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Stable identity so child effects can list it as a dependency safely.
+  // Declared before the early return so hook order stays constant.
+  const clearPending = useCallback(() => setPendingCompose(null), []);
 
   if (!unlocked) {
     return <PinLock onUnlocked={() => setUnlocked(true)} />;
@@ -29,8 +34,6 @@ export default function App() {
     }
     setPendingCompose(action);
   };
-
-  const clearPending = () => setPendingCompose(null);
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg)' }}>

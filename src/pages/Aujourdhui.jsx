@@ -19,7 +19,8 @@ import { XpFlash, LevelUpOverlay } from '../components/RewardFx';
 import Card from '../components/Card';
 import SportModule from '../components/sport/SportModule';
 import Modal from '../components/Modal';
-import LogVideoModal, { VIDEO_FORMATS } from '../components/LogVideoModal';
+import LogVideoModal from '../components/LogVideoModal';
+import { VIDEO_FORMATS } from '../data/videoFormats';
 
 function makeItemLabel(banque, item) {
   if (banque === 'tiktok') return item.titre;
@@ -113,16 +114,18 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const hero  = allSuggestions[0] || null;
   const queue = allSuggestions.slice(1);
 
-  // Handle pendingCompose from FAB
+  // Handle the one-shot compose command sent by the parent (FAB). Opening the
+  // matching input is a side effect of that command, so setState-in-effect is
+  // intentional here; we consume the command immediately to avoid re-runs.
   useEffect(() => {
     if (pendingCompose === 'bonus') {
-      setShowBonusInput(true);
+      setShowBonusInput(true); // eslint-disable-line react-hooks/set-state-in-effect
       onPendingConsumed?.();
     } else if (pendingCompose === 'video_tournee') {
       setShowLogVideo(true);
       onPendingConsumed?.();
     }
-  }, [pendingCompose]);
+  }, [pendingCompose, onPendingConsumed]);
 
   // ─── Agenda event ────────────────────────────────────────────────────────
 

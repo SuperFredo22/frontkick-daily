@@ -48,7 +48,10 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
   const [showPicker, setShowPicker]   = useState(false);
   const [customSecs, setCustomSecs]   = useState('');
 
-  // Timestamp refs — accurate even after screen wake / background return
+  // Timestamp refs — accurate even after screen wake / background return.
+  // The session start is captured once at mount; reading the clock for the
+  // initial ref value is intentional, not a render-purity concern.
+  // eslint-disable-next-line react-hooks/purity
   const sessionStartRef       = useRef(Date.now());
   const restStartRef          = useRef(null);
   const restDurationRef       = useRef(null);
@@ -109,21 +112,22 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
     return () => clearInterval(id);
   }, []);
 
-  // Rest timer end
+  // Rest timer end — when the countdown reaches 0, beep and clear it. Resetting
+  // to null here is the intended side effect of the timer ending.
   useEffect(() => {
     if (restTime === 0) {
       playBeep(880, 0.35);
       restStartRef.current = null;
-      setRestTime(null);
+      setRestTime(null); // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, [restTime]);
 
-  // Series timer end
+  // Series timer end — same pattern as the rest timer.
   useEffect(() => {
     if (seriesTimer === 0) {
       playBeep(660, 0.5);
       seriesTimerStartRef.current = null;
-      setSeriesTimer(null);
+      setSeriesTimer(null); // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, [seriesTimer]);
 
@@ -140,6 +144,7 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
   };
 
   const startSeriesTimer = (dur) => {
+    // eslint-disable-next-line react-hooks/purity -- runs on user action, not during render
     seriesTimerStartRef.current = Date.now();
     seriesTimerDurRef.current = dur;
     setSeriesTimer(dur);

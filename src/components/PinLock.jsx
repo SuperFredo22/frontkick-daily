@@ -1,38 +1,5 @@
 import { useState } from 'react';
-
-const PIN_KEY  = 'fk_pin';
-const SESSION_KEY = 'fk_unlocked';
-
-function hashPin(pin) {
-  // Simple obfuscation — not crypto-grade, but prevents casual localStorage inspection
-  return btoa(pin.split('').reverse().join('') + '_fk');
-}
-
-function getPinHash() {
-  return localStorage.getItem(PIN_KEY) || null;
-}
-
-function setPinHash(pin) {
-  localStorage.setItem(PIN_KEY, hashPin(pin));
-}
-
-function checkPin(pin) {
-  const stored = getPinHash();
-  if (!stored) return false;
-  return stored === hashPin(pin);
-}
-
-function unlock() {
-  sessionStorage.setItem(SESSION_KEY, '1');
-}
-
-export function isUnlocked() {
-  return sessionStorage.getItem(SESSION_KEY) === '1';
-}
-
-export function hasPinSet() {
-  return !!localStorage.getItem(PIN_KEY);
-}
+import { checkPin, setPinHash, unlock, hasPinSet, clearPin } from '../utils/pinLock';
 
 // ── Numeric keypad ────────────────────────────────────────────────────────────
 function Keypad({ onDigit, onDelete }) {
@@ -195,7 +162,7 @@ export default function PinLock({ onUnlocked }) {
         <button
           onClick={() => {
             if (window.confirm('Supprimer le code PIN ? Tu devras en créer un nouveau.')) {
-              localStorage.removeItem(PIN_KEY);
+              clearPin();
               setMode('set');
               setStep(1);
               setPin('');

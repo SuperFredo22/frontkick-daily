@@ -17,7 +17,7 @@ function saveBilan(text) {
     const others  = bilans.filter(b => b.date !== TODAY);
     others.unshift({ date: TODAY, resume: clean });
     localStorage.setItem(BILANS_KEY, JSON.stringify(others.slice(0, 14)));
-  } catch {}
+  } catch { /* ignore storage errors */ }
 }
 
 function getBilanContext() {
