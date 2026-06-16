@@ -50,6 +50,20 @@ export function getMonthStats() {
   return { tiktok, fightfocus, marque, projets };
 }
 
+// Nombre d'"actions importantes" (bonus) loguées depuis le début du mois.
+export function getBonusMonthCount() {
+  const start = getMonthStart();
+  const today = new Date();
+  let count = 0;
+  const d = new Date(start);
+  while (d <= today) {
+    const journal = getJournalForDate(formatDate(d));
+    count += (journal?.bonus || []).length;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
 export function getLast30DaysStats() {
   return getLast30Days().map(dateStr => {
     const journal = getJournalForDate(dateStr);

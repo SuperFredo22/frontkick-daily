@@ -33,6 +33,7 @@ export default function SettingsModal({ open, onClose }) {
     if (count === 0) { alert('Aucune donnée à exporter.'); return; }
     const date = new Date().toISOString().split('T')[0];
     triggerDownload(JSON.stringify(data, null, 2), `frontkick-backup-${date}.json`);
+    try { localStorage.setItem('fk_last_backup', String(Date.now())); } catch { /* ignore */ }
     setExportDone(true);
     setTimeout(() => setExportDone(false), 3000);
   };

@@ -3,16 +3,19 @@ import { Target, Plus, Minus, Pencil, Trash2, Check, Zap } from 'lucide-react';
 import Modal from './Modal';
 import { useJalons } from '../hooks/useJalons';
 import { JALON_CATEGORIES } from '../data/jalons';
-import { getMonthStats, getSportMonthStats, getSportQuarterCount } from '../utils/stats';
+import { getMonthStats, getSportMonthStats, getSportQuarterCount, getBonusMonthCount } from '../utils/stats';
 
 const CATEGORIES = Object.keys(JALON_CATEGORIES);
 
 // Suivis automatiques : la progression est lue en direct depuis les données
-// réelles de l'app (journal). Le jalon devient alors non éditable à la main.
+// réelles de l'app (journal). Le jalon reste hybride : il additionne ce compte
+// automatique et un ajustement manuel (jalon.actuel) — pratique pour intégrer
+// ce que tu as déjà fait hors de l'app (ex. vidéos publiées avant de saisir).
 const JALON_SOURCES = {
   videos_mois:   { label: 'Vidéos publiées · ce mois',    compute: () => getMonthStats().tiktok },
   seances_mois:  { label: 'Entraînements · ce mois',      compute: () => getSportMonthStats().total },
   seances_trim:  { label: 'Entraînements · ce trimestre', compute: () => getSportQuarterCount() },
+  actions_mois:  { label: 'Actions importantes · ce mois', compute: () => getBonusMonthCount() },
   missions_mois: { label: 'Missions accomplies · ce mois', compute: () => {
     const m = getMonthStats();
     return m.tiktok + m.fightfocus + m.marque +
@@ -47,7 +50,10 @@ function JalonCard({ jalon, onStep, onEdit, onDelete }) {
   const cible = jalon.cible || 1;
   const sourceDef = jalon.source ? JALON_SOURCES[jalon.source] : null;
   const auto = !!sourceDef;
-  const actuel = auto ? sourceDef.compute() : Math.max(0, jalon.actuel || 0);
+  // jalon.actuel = valeur (manuel) OU ajustement ajouté au compte auto (hybride).
+  const adjust = jalon.actuel || 0;
+  const base = auto ? sourceDef.compute() : 0;
+  const actuel = Math.max(0, base + adjust);
   const pct = Math.min(100, Math.round((actuel / cible) * 100));
   const done = actuel >= cible;
 
@@ -72,16 +78,14 @@ function JalonCard({ jalon, onStep, onEdit, onDelete }) {
       </p>
 
       <div className="flex items-center gap-2 mt-2">
-        {!auto && (
-          <button
-            onClick={() => onStep(jalon.id, -1)}
-            disabled={actuel <= 0}
-            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 disabled:opacity-30"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--ink-2)' }}
-          >
-            <Minus size={14} />
-          </button>
-        )}
+        <button
+          onClick={() => onStep(jalon.id, -1)}
+          disabled={adjust <= 0}
+          className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 disabled:opacity-30"
+          style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--ink-2)' }}
+        >
+          <Minus size={14} />
+        </button>
 
         <div className="flex-1">
           <div style={{ height: 6, borderRadius: 4, background: 'var(--surface-2)', overflow: 'hidden' }}>
@@ -90,19 +94,17 @@ function JalonCard({ jalon, onStep, onEdit, onDelete }) {
           <p className="text-[10px] mt-1 text-center flex items-center justify-center gap-1" style={{ color: 'var(--ink-3)' }}>
             {auto && <Zap size={9} style={{ color }} />}
             {actuel} / {cible} {jalon.unite || ''} · {pct}%
-            {auto && <span style={{ color: 'var(--ink-3)' }}>· auto</span>}
+            {auto && <span style={{ color: 'var(--ink-3)' }}>· auto{adjust > 0 ? ` +${adjust}` : ''}</span>}
           </p>
         </div>
 
-        {!auto && (
-          <button
-            onClick={() => onStep(jalon.id, 1)}
-            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: color, color: '#fff' }}
-          >
-            <Plus size={14} />
-          </button>
-        )}
+        <button
+          onClick={() => onStep(jalon.id, 1)}
+          className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: color, color: '#fff' }}
+        >
+          <Plus size={14} />
+        </button>
       </div>
     </div>
   );
@@ -119,7 +121,7 @@ export default function Jalons() {
   const list = jalons || [];
   const jalonValue = (j) => {
     const def = j.source ? JALON_SOURCES[j.source] : null;
-    return def ? def.compute() : Math.max(0, j.actuel || 0);
+    return Math.max(0, (def ? def.compute() : 0) + (j.actuel || 0));
   };
   const reached = list.filter(j => jalonValue(j) >= (j.cible || 1)).length;
 
@@ -226,18 +228,23 @@ export default function Jalons() {
             </select>
             {form.source && (
               <span className="text-[10px] mt-1 block" style={{ color: 'var(--ink-3)' }}>
-                Compté automatiquement depuis ton activité.
+                Compté automatiquement depuis ton activité — tu peux ajouter un ajustement manuel ci-dessous.
               </span>
             )}
           </label>
           <div className="flex gap-3">
-            {!form.source && (
-              <label className="flex-1">
-                <span className="text-xs text-gray-500 block mb-1">Actuel</span>
-                <input type="number" min="0" value={form.actuel} onChange={e => setForm(f => ({ ...f, actuel: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-              </label>
-            )}
+            <label className="flex-1">
+              <span className="text-xs text-gray-500 block mb-1">
+                {form.source ? 'Ajout manuel' : 'Actuel'}
+              </span>
+              <input type="number" value={form.actuel} onChange={e => setForm(f => ({ ...f, actuel: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              {form.source && (
+                <span className="text-[10px] mt-1 block" style={{ color: 'var(--ink-3)' }}>
+                  Déjà fait hors de l'app (s'ajoute au compte auto).
+                </span>
+              )}
+            </label>
             <label className="flex-1">
               <span className="text-xs text-gray-500 block mb-1">Cible</span>
               <input type="number" min="1" value={form.cible} onChange={e => setForm(f => ({ ...f, cible: e.target.value }))}

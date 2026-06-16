@@ -24,12 +24,10 @@ function getSub(banque, item, config) {
 }
 
 export default function SuggestionCard({
-  banque, item, onFait, onReporte, onAutre, onSuivante, onFocus,
+  banque, item, onFait, onReporte, onLogVideo, onSuivante, onFocus,
   config: configOverride, exhaustedToday,
   hero = false, fadingOut = false,
 }) {
-  const [showAutre, setShowAutre] = useState(false);
-  const [autreText, setAutreText] = useState('');
   const [showHeure, setShowHeure] = useState(false);
   const [heureDebut, setHeureDebut] = useState('');
   const [heureFin, setHeureFin] = useState('');
@@ -60,12 +58,6 @@ export default function SuggestionCard({
   const confirmFait = (withTime) => {
     setShowHeure(false);
     onFait(item, withTime ? { debut: heureDebut, fin: heureFin } : null);
-  };
-
-  const handleAutreSubmit = () => {
-    onAutre(item, autreText);
-    setShowAutre(false);
-    setAutreText('');
   };
 
   const label = getLabel(banque, item, configOverride);
@@ -109,29 +101,6 @@ export default function SuggestionCard({
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           </label>
         </div>
-      </Modal>
-
-      <Modal
-        open={showAutre}
-        onClose={() => setShowAutre(false)}
-        title="J'ai fait autre chose"
-        footer={
-          <>
-            <button onClick={handleAutreSubmit} disabled={!autreText.trim()}
-              className="flex-1 py-2.5 rounded-lg text-white font-medium text-sm disabled:opacity-40"
-              style={{ background: config.color }}>
-              Enregistrer
-            </button>
-            <button onClick={() => setShowAutre(false)}
-              className="flex-1 py-2.5 rounded-lg bg-gray-100 text-gray-600 font-medium text-sm">
-              Annuler
-            </button>
-          </>
-        }
-      >
-        <textarea autoFocus value={autreText} onChange={e => setAutreText(e.target.value)}
-          placeholder="Décris ce que tu as fait à la place..."
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" rows={4} />
       </Modal>
     </>
   );
@@ -224,9 +193,9 @@ export default function SuggestionCard({
           {/* Secondary actions */}
           <div className="flex gap-2">
             {[
-              { label: '↻ Reporté', action: () => onReporte(item) },
-              { label: '✎ Autre',   action: () => setShowAutre(true) },
-              { label: '⏭ Skip',    action: () => onSuivante?.(item) },
+              { label: '↻ Reporté',   action: () => onReporte(item) },
+              ...(onLogVideo ? [{ label: '🎬 Vidéo', action: () => onLogVideo() }] : []),
+              { label: '⏭ Skip',      action: () => onSuivante?.(item) },
             ].map(({ label: l, action }) => (
               <button
                 key={l}
@@ -278,12 +247,14 @@ export default function SuggestionCard({
           >
             🔄 Reporté
           </button>
-          <button
-            onClick={() => setShowAutre(true)}
-            className="flex-1 text-sm font-medium py-2 px-3 rounded-lg bg-gray-100 text-gray-600 btn-press"
-          >
-            ✏️ Autre
-          </button>
+          {onLogVideo && (
+            <button
+              onClick={() => onLogVideo()}
+              className="flex-1 text-sm font-medium py-2 px-3 rounded-lg bg-gray-100 text-gray-600 btn-press"
+            >
+              🎬 Vidéo
+            </button>
+          )}
         </div>
 
         {onSuivante && (

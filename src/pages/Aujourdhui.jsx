@@ -28,6 +28,25 @@ function makeItemLabel(banque, item) {
 const BANQUE_EMOJI = { tiktok: '🎬', fightfocus: '🌐', marque: '👕' };
 const BANQUE_COLOR = { tiktok: 'var(--red)', fightfocus: 'var(--cyan)', marque: 'var(--orange)' };
 
+// Actions rapides pour loguer en un tap une "action importante" hors-liste —
+// dont le travail de refonte de l'app. Chacune devient une action enregistrée
+// qui rapporte de l'XP et alimente les stats du mois (et le jalon "Actions
+// importantes" si tu en crées un).
+const ACTIONS_RAPIDES = [
+  "🛠️ Travail sur l'app",
+  '📚 Apprentissage',
+  '🤝 Networking / contact',
+  '🧹 Admin & organisation',
+];
+
+// État de la dernière sauvegarde (export). Isolé hors du render pour garder
+// celui-ci pur. Renvoie le timestamp et le nombre de jours écoulés.
+function backupReminderState() {
+  const last = Number(localStorage.getItem('fk_last_backup') || 0);
+  const days = last ? Math.floor((Date.now() - last) / 864e5) : Infinity;
+  return { last, days };
+}
+
 // Long-press hook: touch events on mobile (iOS doesn't cancel them for context-menu detection),
 // pointer events on desktop. delay ms = long press threshold.
 function useLongPress(onLongPress, onShortPress, delay = 500) {
@@ -124,6 +143,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const [showSportSheet, setShowSportSheet] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showLogVideo, setShowLogVideo] = useState(false);
+  const [backupDismissed, setBackupDismissed] = useState(false);
 
   // Édition habitudes
   const [showPrieresEdit, setShowPrieresEdit] = useState(false);
@@ -198,10 +218,6 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     addJournalTache({ id: item.id, banque, label: makeItemLabel(banque, item), statut: 'reporte' });
   };
 
-  const handleAutre = (banque, item, texte) => {
-    addJournalTache({ id: item.id, banque, label: makeItemLabel(banque, item), statut: 'autre', autreTexte: texte });
-  };
-
   const handleSuivante = (banque, item) => {
     setReporte(prev => [...(prev || []), `${banque}_${item.id}`]);
   };
@@ -226,10 +242,6 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     addJournalTache({ id: tache.id, banque: 'projet', projetId: projet.id, projetNom: projet.nom, label: tache.description, statut: 'reporte' });
   };
 
-  const handleProjetAutre = (projet, tache, texte) => {
-    addJournalTache({ id: tache.id, banque: 'projet', projetId: projet.id, projetNom: projet.nom, label: tache.description, statut: 'autre', autreTexte: texte });
-  };
-
   const handleProjetSuivante = (projet, tache) => {
     setReporte(prev => [...(prev || []), `projet_${projet.id}_${tache.id}`]);
   };
@@ -245,11 +257,6 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const handleSuggestionReporte = (suggestion) => {
     if (suggestion.banque === 'projet') handleProjetReporte(suggestion.projet, suggestion.item);
     else handleReporte(suggestion.banque, suggestion.item);
-  };
-
-  const handleSuggestionAutre = (suggestion, texte) => {
-    if (suggestion.banque === 'projet') handleProjetAutre(suggestion.projet, suggestion.item, texte);
-    else handleAutre(suggestion.banque, suggestion.item, texte);
   };
 
   const handleSuggestionSuivante = (suggestion) => {
@@ -307,6 +314,12 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
     flashXp(XP.bonus);
   };
 
+  // Log instantané d'une action importante (chip) — même récompense qu'un bonus.
+  const addBonusQuick = (texte) => {
+    setJournal(prev => ({ ...prev, bonus: [...(prev.bonus || []), { id: Date.now(), texte }] }));
+    flashXp(XP.bonus);
+  };
+
   const removeBonus = (id) => {
     setJournal(prev => ({ ...prev, bonus: (prev.bonus || []).filter(b => b.id !== id) }));
   };
@@ -350,6 +363,11 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   );
 
   const noSportDays = getConsecutiveNoSportDays();
+
+  // Rappel de sauvegarde : si des données existent et qu'aucun export récent
+  // (> 7 j) n'a été fait, on invite à exporter pour ne plus jamais tout perdre.
+  const { last: lastBackup, days: daysSinceBackup } = backupReminderState();
+  const needsBackup = !isYesterday && !backupDismissed && (prog.trackedDays || 0) >= 2 && daysSinceBackup >= 7;
   const hab = journal?.habitudes || { prieres: 0, sport: false, cigarettes: 0, note: '' };
   const tachesFaites    = (journal?.taches || []).filter(t => t.statut === 'fait');
   const tachesReportees = (journal?.taches || []).filter(t => t.statut === 'reporte');
@@ -442,6 +460,34 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
         <div className="mx-4 mt-2 rounded-xl px-4 py-2.5 flex items-center gap-3" style={{ background: 'var(--orange-soft)', border: '1px solid rgba(255,159,28,0.3)' }}>
           <span className="text-xl">⚠️</span>
           <p className="text-sm font-medium" style={{ color: 'var(--orange)' }}>{noSportDays} jours sans entraînement — bouge !</p>
+        </div>
+      )}
+
+      {/* Rappel de sauvegarde — évite de reperdre ses données */}
+      {needsBackup && (
+        <div className="mx-4 mt-2 rounded-xl px-4 py-3 flex items-center gap-3" style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+          <span className="text-xl">💾</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Sauvegarde tes données</p>
+            <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+              {lastBackup ? 'Dernier export il y a plus d\'une semaine.' : 'Aucune sauvegarde encore — protège ta progression.'}
+            </p>
+          </div>
+          <button
+            onClick={() => onOpenSettings?.()}
+            className="btn-press text-xs font-semibold px-3 py-1.5 rounded-lg text-white shrink-0"
+            style={{ background: 'var(--red)' }}
+          >
+            Exporter
+          </button>
+          <button
+            onClick={() => setBackupDismissed(true)}
+            className="btn-press text-base px-1 shrink-0"
+            style={{ color: 'var(--ink-3)' }}
+            aria-label="Ignorer"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -546,7 +592,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
             config={getSuggConfig(hero)}
             onFait={handleHeroFait}
             onReporte={() => handleSuggestionReporte(hero)}
-            onAutre={(_, texte) => handleSuggestionAutre(hero, texte)}
+            onLogVideo={() => setShowLogVideo(true)}
             onSuivante={() => handleSuggestionSuivante(hero)}
             onFocus={() => setFocusOpen(true)}
           />
@@ -574,7 +620,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
                 config={getSuggConfig(s)}
                 onFait={(_, timeSlot) => handleSuggestionFait(s, timeSlot)}
                 onReporte={() => handleSuggestionReporte(s)}
-                onAutre={(_, texte) => handleSuggestionAutre(s, texte)}
+                onLogVideo={() => setShowLogVideo(true)}
                 onSuivante={() => handleSuggestionSuivante(s)}
               />
             ))}
@@ -582,23 +628,11 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
         </section>
       )}
 
-      {/* ── Vidéo tournée hors liste ───────────────────────────────────── */}
+      {/* ── Autres actions importantes ──────────────────────────────────── */}
       <section className="px-4 mt-6">
-        <button
-          onClick={() => setShowLogVideo(true)}
-          className="btn-press w-full flex items-center justify-center gap-2 py-3 rounded-xl"
-          style={{ background: 'var(--surface)', border: '1px dashed var(--line)', color: 'var(--ink-2)', fontSize: 13.5, fontWeight: 600 }}
-        >
-          🎬 J'ai tourné une vidéo hors liste
-          <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>· +20 XP</span>
-        </button>
-      </section>
-
-      {/* ── J'ai aussi fait (bonus) ─────────────────────────────────────── */}
-      <section className="px-4 mt-6">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-1">
           <p className="uppercase tracking-widest text-[11px] font-bold" style={{ color: 'var(--ink-3)' }}>
-            Missions bonus
+            Autres actions importantes
           </p>
           {!showBonusInput && (
             <button
@@ -610,6 +644,25 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
             </button>
           )}
         </div>
+        <p className="text-[11px] mb-3" style={{ color: 'var(--ink-3)' }}>
+          Tout travail qui compte — dont la refonte de cette app. +{XP.bonus} XP chacun.
+        </p>
+
+        {/* Actions rapides — un tap = loguée */}
+        {!showBonusInput && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {ACTIONS_RAPIDES.map(a => (
+              <button
+                key={a}
+                onClick={() => addBonusQuick(a)}
+                className="btn-press text-xs font-medium px-3 py-1.5 rounded-full"
+                style={{ background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--ink-2)' }}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+        )}
 
         {showBonusInput && (
           <div className="mb-3" style={{ background: 'var(--surface)', borderRadius: 14, padding: '10px 12px', boxShadow: 'var(--shadow-card)' }}>
@@ -642,7 +695,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
         )}
 
         {(journal?.bonus || []).length === 0 && !showBonusInput && (
-          <p className="text-sm italic" style={{ color: 'var(--ink-3)' }}>Aucune mission bonus — ajoute-en une !</p>
+          <p className="text-sm italic" style={{ color: 'var(--ink-3)' }}>Choisis une action rapide ci-dessus ou ajoute la tienne.</p>
         )}
         <div className="flex flex-col gap-2">
           {(journal?.bonus || []).map(b => (
