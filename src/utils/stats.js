@@ -143,3 +143,22 @@ export function getSportLast30Days() {
     };
   });
 }
+
+// Start of the current calendar quarter (Jan/Apr/Jul/Oct 1st).
+export function getQuarterStart() {
+  const d = new Date();
+  return new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1);
+}
+
+// Number of training sessions logged since the start of the current quarter.
+export function getSportQuarterCount() {
+  const today = new Date();
+  const d = new Date(getQuarterStart());
+  let count = 0;
+  while (d <= today) {
+    const journal = getJournalForDate(formatDate(d));
+    if (journal?.sport || journal?.habitudes?.sport) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
