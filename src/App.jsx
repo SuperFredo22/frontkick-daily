@@ -24,7 +24,7 @@ export default function App() {
       setPage('banques');
     } else if (action === 'agenda') {
       setPage('agenda');
-    } else if (action === 'bonus') {
+    } else if (action === 'bonus' || action === 'video_tournee') {
       setPage('today');
     }
     setPendingCompose(action);

@@ -17,6 +17,7 @@ import { XpFlash, LevelUpOverlay } from '../components/RewardFx';
 import Card from '../components/Card';
 import SportModule from '../components/sport/SportModule';
 import Modal from '../components/Modal';
+import LogVideoModal, { VIDEO_FORMATS } from '../components/LogVideoModal';
 
 function makeItemLabel(banque, item) {
   if (banque === 'tiktok') return item.titre;
@@ -122,6 +123,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const [heroFading, setHeroFading] = useState(false);
   const [showSportSheet, setShowSportSheet] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showLogVideo, setShowLogVideo] = useState(false);
 
   // Édition habitudes
   const [showPrieresEdit, setShowPrieresEdit] = useState(false);
@@ -154,6 +156,9 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   useEffect(() => {
     if (pendingCompose === 'bonus') {
       setShowBonusInput(true);
+      onPendingConsumed?.();
+    } else if (pendingCompose === 'video_tournee') {
+      setShowLogVideo(true);
       onPendingConsumed?.();
     }
   }, [pendingCompose]);
@@ -275,6 +280,17 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
 
   const handleSportClear = () => {
     setJournal(prev => ({ ...prev, sport: null, habitudes: { ...(prev.habitudes || {}), sport: false } }));
+  };
+
+  // ─── Vidéo tournée hors liste ─────────────────────────────────────────────
+  // Logged as a completed TikTok mission in today's journal: it earns XP,
+  // shows in "Victoires du jour", counts in the monthly "Vidéos publiées"
+  // stat and is seen by the Coach — exactly like marking a bank idea done.
+  const handleLogVideoSave = ({ titre, format }) => {
+    const fallback = VIDEO_FORMATS.find(f => f.key === format)?.defaultLabel || 'Vidéo (hors liste)';
+    addJournalTache({ id: Date.now(), banque: 'tiktok', label: titre || fallback, statut: 'fait', horsListe: true, format });
+    setShowLogVideo(false);
+    flashXp(XP.mission);
   };
 
   // ─── Habitudes ────────────────────────────────────────────────────────────
@@ -566,6 +582,18 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
         </section>
       )}
 
+      {/* ── Vidéo tournée hors liste ───────────────────────────────────── */}
+      <section className="px-4 mt-6">
+        <button
+          onClick={() => setShowLogVideo(true)}
+          className="btn-press w-full flex items-center justify-center gap-2 py-3 rounded-xl"
+          style={{ background: 'var(--surface)', border: '1px dashed var(--line)', color: 'var(--ink-2)', fontSize: 13.5, fontWeight: 600 }}
+        >
+          🎬 J'ai tourné une vidéo hors liste
+          <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>· +20 XP</span>
+        </button>
+      </section>
+
       {/* ── J'ai aussi fait (bonus) ─────────────────────────────────────── */}
       <section className="px-4 mt-6">
         <div className="flex items-center justify-between mb-3">
@@ -828,6 +856,13 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
           </button>
         </div>
       </Modal>
+
+      {/* ── Vidéo tournée hors liste (modal) ───────────────────────────── */}
+      <LogVideoModal
+        open={showLogVideo}
+        onClose={() => setShowLogVideo(false)}
+        onSave={handleLogVideoSave}
+      />
 
       {/* ── Mode Focus ─────────────────────────────────────────────────── */}
       {focusOpen && hero && (
