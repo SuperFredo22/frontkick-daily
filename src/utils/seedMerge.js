@@ -1,4 +1,5 @@
 import { tiktokInitial } from '../data/tiktok';
+import { marqueInitial } from '../data/marque';
 
 // Seed items shipped after the first release use IDs >= this threshold so they
 // never collide with user-created items (which auto-increment from the original
@@ -52,5 +53,6 @@ export function mergeNewSeeds() {
   try {
     if (typeof localStorage === 'undefined') return;
     mergeBankSeed('tiktok', tiktokInitial);
+    mergeBankSeed('marque', marqueInitial);
   } catch { /* localStorage unavailable */ }
 }

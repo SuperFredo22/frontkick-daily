@@ -49,4 +49,60 @@ export const tiktokInitial = [
   { id: 1015, titre: "Avant / après 1 an de Muay Thai", format: "Format court", discipline: "Muay Thai", priorite: "HAUTE", statut: "a_tourner" },
   { id: 1016, titre: "Le détail qui change tout sur ton jab", format: "Format court", discipline: "Boxe", priorite: "MOYENNE", statut: "a_tourner" },
   { id: 1017, titre: "Ce réflexe peut te sauver en clinch", format: "Format court", discipline: "MMA", priorite: "FAIBLE", statut: "a_tourner" },
+
+  // ── Série « Sport du jour » ────────────────────────────────────────────────
+  // Un sport de combat / traditionnel méconnu par jour. Cette série est
+  // affichée EN PRIORITÉ comme mission du jour sur l'écran Combat (voir
+  // PRIORITY_SERIE dans hooks/useBanques.js). Tournés à l'avance, ils se
+  // publient au jour le jour. IDs 1100+.
+  { id: 1100, titre: "Le Sambo : l'art martial qui a forgé les rois du MMA russe", format: "Sport du jour", serie: "Sport du jour", discipline: "Russie", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1101, titre: "Le Lethwei : la boxe birmane où les coups de tête sont permis", format: "Sport du jour", serie: "Sport du jour", discipline: "Birmanie", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1102, titre: "La Savate : le seul art de combat qui se bat en chaussures", format: "Sport du jour", serie: "Sport du jour", discipline: "France", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1103, titre: "Le Kalaripayattu : peut-être le plus vieil art martial du monde", format: "Sport du jour", serie: "Sport du jour", discipline: "Inde", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1104, titre: "Le Vovinam : l'art martial national du Vietnam", format: "Sport du jour", serie: "Sport du jour", discipline: "Vietnam", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1105, titre: "Le Bokator : l'art khmer vieux de mille ans", format: "Sport du jour", serie: "Sport du jour", discipline: "Cambodge", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1106, titre: "Le Pankration : l'ancêtre antique du MMA", format: "Sport du jour", serie: "Sport du jour", discipline: "Grèce antique", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1107, titre: "Le Sumo : bien plus qu'une lutte de géants", format: "Sport du jour", serie: "Sport du jour", discipline: "Japon", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1108, titre: "La Glima : la lutte des Vikings", format: "Sport du jour", serie: "Sport du jour", discipline: "Scandinavie", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1109, titre: "Le Schwingen : la lutte dans la sciure suisse", format: "Sport du jour", serie: "Sport du jour", discipline: "Suisse", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1110, titre: "Le Varzesh-e Pahlavani : la muscu rituelle des guerriers perses", format: "Sport du jour", serie: "Sport du jour", discipline: "Iran", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1111, titre: "Le Pencak Silat : l'art aux mille styles d'Indonésie", format: "Sport du jour", serie: "Sport du jour", discipline: "Indonésie", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1112, titre: "L'Eskrima : le combat au bâton des Philippines", format: "Sport du jour", serie: "Sport du jour", discipline: "Philippines", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1113, titre: "Le Sanda : la boxe de combat chinoise moderne", format: "Sport du jour", serie: "Sport du jour", discipline: "Chine", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1114, titre: "Le Shuai Jiao : la lutte chinoise millénaire", format: "Sport du jour", serie: "Sport du jour", discipline: "Chine", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1115, titre: "Le Kurash : la lutte d'Asie centrale", format: "Sport du jour", serie: "Sport du jour", discipline: "Ouzbékistan", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1116, titre: "Le Yağlı Güreş : la lutte à l'huile turque", format: "Sport du jour", serie: "Sport du jour", discipline: "Turquie", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1117, titre: "La Capoeira : entre danse et combat", format: "Sport du jour", serie: "Sport du jour", discipline: "Brésil", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1118, titre: "Le Taekkyon : l'art martial dansé de Corée", format: "Sport du jour", serie: "Sport du jour", discipline: "Corée", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1119, titre: "Le Gatka : le combat au sabre des Sikhs", format: "Sport du jour", serie: "Sport du jour", discipline: "Inde", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1120, titre: "Le Jogo do Pau : l'escrime au bâton portugaise", format: "Sport du jour", serie: "Sport du jour", discipline: "Portugal", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1121, titre: "La Canne de combat : l'escrime à la canne française", format: "Sport du jour", serie: "Sport du jour", discipline: "France", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1122, titre: "Le Bataireacht : le bâton de combat irlandais", format: "Sport du jour", serie: "Sport du jour", discipline: "Irlande", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1123, titre: "La Naginata : l'arme des guerrières japonaises", format: "Sport du jour", serie: "Sport du jour", discipline: "Japon", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1124, titre: "Le Bartitsu : l'art martial de Sherlock Holmes", format: "Sport du jour", serie: "Sport du jour", discipline: "Angleterre", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1125, titre: "Le Catch Wrestling : la lutte qui a influencé tout le grappling", format: "Sport du jour", serie: "Sport du jour", discipline: "Angleterre", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1126, titre: "La Luta Livre : la rivale brésilienne du JJB", format: "Sport du jour", serie: "Sport du jour", discipline: "Brésil", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1127, titre: "Le Combat Sambo : le sambo qui frappe", format: "Sport du jour", serie: "Sport du jour", discipline: "Russie", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1128, titre: "Le Hapkido : l'art coréen des clés et projections", format: "Sport du jour", serie: "Sport du jour", discipline: "Corée", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1129, titre: "Le Systema : l'art martial des forces spéciales russes", format: "Sport du jour", serie: "Sport du jour", discipline: "Russie", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1130, titre: "Le Krav Maga : le self-defense de l'armée israélienne", format: "Sport du jour", serie: "Sport du jour", discipline: "Israël", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1131, titre: "Le Bökh : la lutte mongole des steppes", format: "Sport du jour", serie: "Sport du jour", discipline: "Mongolie", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1132, titre: "Le Laamb : la lutte sénégalaise, sport national", format: "Sport du jour", serie: "Sport du jour", discipline: "Sénégal", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1133, titre: "Le Dambe : la boxe à mains nues du Nigeria", format: "Sport du jour", serie: "Sport du jour", discipline: "Nigeria", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1134, titre: "Le Nguni : le combat au bâton zoulou", format: "Sport du jour", serie: "Sport du jour", discipline: "Afrique du Sud", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1135, titre: "Le Musti-Yuddha : la boxe ancienne de l'Inde", format: "Sport du jour", serie: "Sport du jour", discipline: "Inde", priorite: "HAUTE", statut: "a_tourner" },
+
+  // ── Série séquencée « Guide du débutant MMA » (1→5) ────────────────────────
+  { id: 1200, titre: "Guide du débutant MMA (1/5) : choisir ta première discipline", format: "Tuto/Série", serie: "Guide débutant MMA", discipline: "MMA", priorite: "HAUTE", statut: "a_tourner" },
+  { id: 1201, titre: "Guide du débutant MMA (2/5) : à quoi ressemble ton premier mois", format: "Tuto/Série", serie: "Guide débutant MMA", discipline: "MMA", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 1202, titre: "Guide du débutant MMA (3/5) : l'équipement vraiment indispensable", format: "Tuto/Série", serie: "Guide débutant MMA", discipline: "MMA", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 1203, titre: "Guide du débutant MMA (4/5) : les erreurs qui te font stagner", format: "Tuto/Série", serie: "Guide débutant MMA", discipline: "MMA", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 1204, titre: "Guide du débutant MMA (5/5) : survivre à ton premier sparring", format: "Tuto/Série", serie: "Guide débutant MMA", discipline: "MMA", priorite: "MOYENNE", statut: "a_tourner" },
+
+  // ── Série séquencée « Anatomie d'une soumission » (1→5) ────────────────────
+  { id: 1210, titre: "Anatomie d'une soumission (1/5) : le triangle", format: "Éducatif/Série", serie: "Anatomie d'une soumission", discipline: "BJJ", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 1211, titre: "Anatomie d'une soumission (2/5) : la clé de bras", format: "Éducatif/Série", serie: "Anatomie d'une soumission", discipline: "BJJ", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 1212, titre: "Anatomie d'une soumission (3/5) : l'étranglement arrière (RNC)", format: "Éducatif/Série", serie: "Anatomie d'une soumission", discipline: "BJJ", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 1213, titre: "Anatomie d'une soumission (4/5) : la guillotine", format: "Éducatif/Série", serie: "Anatomie d'une soumission", discipline: "BJJ", priorite: "MOYENNE", statut: "a_tourner" },
+  { id: 1214, titre: "Anatomie d'une soumission (5/5) : le kimura", format: "Éducatif/Série", serie: "Anatomie d'une soumission", discipline: "BJJ", priorite: "MOYENNE", statut: "a_tourner" },
 ];
