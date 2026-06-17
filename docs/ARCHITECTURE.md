@@ -44,6 +44,10 @@ useStorage  ──►  useJournal / useBanques / useAgenda / useProjets / useJal
   `src/styles/tokens.css`. Ne pas coder de couleurs en dur.
 - **Champs de formulaire** : thème sombre + 16px imposés globalement dans
   `src/index.css` (≥16px = pas d'auto-zoom iOS au focus).
+- **Gris legacy** : les utilitaires Tailwind `bg-white`, `bg-gray-*`,
+  `text-gray-*`, `border-gray-*` sont remappés vers les tokens sombres dans
+  `src/index.css`. Le nouveau code devrait préférer directement les tokens
+  (`var(--surface)`, `var(--ink-2)`, …), mais le legacy reste lisible.
 - **Modales** : passer par `components/Modal.jsx` (gère le clavier mobile via
   VisualViewport pour ne pas masquer les champs).
 - **Config des banques** : source unique dans `src/data/banques.config.js`

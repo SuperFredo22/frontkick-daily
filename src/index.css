@@ -61,6 +61,17 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
   border: 1px solid var(--line);
 }
 
+/* Legacy Tailwind grey utilities → dark-theme tokens. The whole app is dark,
+   so light-grey surfaces and dark-grey text would otherwise be low-contrast or
+   invisible. No element combines these classes with an inline colour, so the
+   remap is safe (interaction variants like active:/hover: keep their behaviour). */
+.bg-gray-50, .bg-gray-100 { background-color: var(--surface-2) !important; }
+.bg-gray-200 { background-color: var(--surface-3) !important; }
+.text-gray-800, .text-gray-700 { color: var(--ink) !important; }
+.text-gray-600, .text-gray-500 { color: var(--ink-2) !important; }
+.text-gray-400, .text-gray-300 { color: var(--ink-3) !important; }
+.border-gray-50, .border-gray-100, .border-gray-200 { border-color: var(--line) !important; }
+
 .drag-handle {
   cursor: grab;
   touch-action: none;

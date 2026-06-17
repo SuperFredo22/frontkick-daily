@@ -95,24 +95,24 @@ export default function Agenda() {
   return (
     <div className="flex flex-col h-screen">
       {/* Week navigation */}
-      <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center justify-between">
-        <button onClick={() => setWeekStart(w => addDays(w, -7))} className="w-8 h-8 flex items-center justify-center text-gray-500">‹</button>
-        <div className="text-sm font-semibold text-gray-700">
+      <div className="px-4 py-2 flex items-center justify-between" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--line)' }}>
+        <button onClick={() => setWeekStart(w => addDays(w, -7))} className="w-8 h-8 flex items-center justify-center" style={{ color: 'var(--ink-2)' }}>‹</button>
+        <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
           {days[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} –{' '}
           {days[6].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
         </div>
-        <button onClick={() => setWeekStart(w => addDays(w, 7))} className="w-8 h-8 flex items-center justify-center text-gray-500">›</button>
+        <button onClick={() => setWeekStart(w => addDays(w, 7))} className="w-8 h-8 flex items-center justify-center" style={{ color: 'var(--ink-2)' }}>›</button>
       </div>
 
       {/* Day headers */}
-      <div className="bg-white border-b border-gray-100 flex" style={{ paddingLeft: 40 }}>
+      <div className="flex" style={{ paddingLeft: 40, background: 'var(--surface)', borderBottom: '1px solid var(--line)' }}>
         {days.map(d => {
           const isToday = isSameDay(d, new Date());
           return (
             <div key={formatDate(d)} className="flex-1 text-center py-1.5">
-              <div className="text-[10px] text-gray-400 uppercase">{formatDayShort(d).split(' ')[0]}</div>
-              <div className={`text-sm font-semibold ${isToday ? 'text-white rounded-full w-6 h-6 flex items-center justify-center mx-auto' : 'text-gray-700'}`}
-                style={isToday ? { background: 'var(--red)' } : {}}>
+              <div className="text-[10px] uppercase" style={{ color: 'var(--ink-3)' }}>{formatDayShort(d).split(' ')[0]}</div>
+              <div className={`text-sm font-semibold ${isToday ? 'text-white rounded-full w-6 h-6 flex items-center justify-center mx-auto' : ''}`}
+                style={isToday ? { background: 'var(--red)' } : { color: 'var(--ink-2)' }}>
                 {d.getDate()}
               </div>
             </div>
@@ -126,8 +126,8 @@ export default function Agenda() {
           {/* Hour labels */}
           <div className="w-10 flex-shrink-0">
             {HOURS.map(h => (
-              <div key={h} className="h-14 border-b border-gray-50 flex items-start justify-end pr-1 pt-0.5">
-                <span className="text-[10px] text-gray-300">{h}h</span>
+              <div key={h} className="h-14 flex items-start justify-end pr-1 pt-0.5" style={{ borderBottom: '1px solid var(--line-2)' }}>
+                <span className="text-[10px]" style={{ color: 'var(--ink-3)' }}>{h}h</span>
               </div>
             ))}
           </div>
@@ -136,11 +136,12 @@ export default function Agenda() {
           {days.map(d => {
             const events = eventsForDay(d);
             return (
-              <div key={formatDate(d)} className="flex-1 border-l border-gray-50 relative">
+              <div key={formatDate(d)} className="flex-1 relative" style={{ borderLeft: '1px solid var(--line-2)' }}>
                 {HOURS.map(h => (
                   <div
                     key={h}
-                    className="h-14 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="h-14 cursor-pointer transition-colors"
+                    style={{ borderBottom: '1px solid var(--line-2)' }}
                     onClick={() => openNew(d, h)}
                   />
                 ))}
@@ -173,7 +174,7 @@ export default function Agenda() {
             >
               Enregistrer
             </button>
-            <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-lg bg-gray-100 text-gray-600 font-medium text-sm">
+            <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-lg font-medium text-sm" style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}>
               Annuler
             </button>
           </div>
@@ -181,7 +182,7 @@ export default function Agenda() {
       >
         <div className="flex flex-col gap-3">
           <label>
-            <span className="text-xs text-gray-500 block mb-1">Titre *</span>
+            <span className="text-xs block mb-1" style={{ color: 'var(--ink-3)' }}>Titre *</span>
             <input
               autoFocus
               value={form.titre}
@@ -191,7 +192,7 @@ export default function Agenda() {
             />
           </label>
           <label>
-            <span className="text-xs text-gray-500 block mb-1">Date</span>
+            <span className="text-xs block mb-1" style={{ color: 'var(--ink-3)' }}>Date</span>
             <input
               type="date"
               value={form.date}
@@ -201,35 +202,38 @@ export default function Agenda() {
           </label>
           <div className="flex gap-3">
             <label className="flex-1">
-              <span className="text-xs text-gray-500 block mb-1">Début</span>
+              <span className="text-xs block mb-1" style={{ color: 'var(--ink-3)' }}>Début</span>
               <input type="time" value={form.heureDebut} onChange={e => setForm(f => ({ ...f, heureDebut: e.target.value }))}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </label>
             <label className="flex-1">
-              <span className="text-xs text-gray-500 block mb-1">Fin</span>
+              <span className="text-xs block mb-1" style={{ color: 'var(--ink-3)' }}>Fin</span>
               <input type="time" value={form.heureFin} onChange={e => setForm(f => ({ ...f, heureFin: e.target.value }))}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </label>
           </div>
           <label>
-            <span className="text-xs text-gray-500 block mb-1">Lieu (optionnel)</span>
+            <span className="text-xs block mb-1" style={{ color: 'var(--ink-3)' }}>Lieu (optionnel)</span>
             <input value={form.lieu} onChange={e => setForm(f => ({ ...f, lieu: e.target.value }))}
               placeholder="Ex : Salle de sport" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           </label>
           <label>
-            <span className="text-xs text-gray-500 block mb-1">Note (optionnel)</span>
+            <span className="text-xs block mb-1" style={{ color: 'var(--ink-3)' }}>Note (optionnel)</span>
             <textarea value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" rows={2} />
           </label>
           <label className="flex items-center gap-3">
             <button
               onClick={() => setForm(f => ({ ...f, recurrent: !f.recurrent }))}
-              className={`w-12 h-6 rounded-full relative transition-colors ${form.recurrent ? '' : 'bg-gray-200'}`}
-              style={{ background: form.recurrent ? 'var(--red)' : undefined }}
+              className="w-12 h-6 rounded-full relative transition-colors"
+              style={{ background: form.recurrent ? 'var(--red)' : 'var(--line-2)' }}
             >
-              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.recurrent ? 'translate-x-6' : 'translate-x-0.5'}`} />
+              <span
+                className={`absolute top-0.5 w-5 h-5 rounded-full shadow transition-transform ${form.recurrent ? 'translate-x-6' : 'translate-x-0.5'}`}
+                style={{ background: '#fff' }}
+              />
             </button>
-            <span className="text-sm text-gray-700">Récurrent chaque semaine</span>
+            <span className="text-sm" style={{ color: 'var(--ink-2)' }}>Récurrent chaque semaine</span>
           </label>
         </div>
       </Modal>
