@@ -1,6 +1,10 @@
 import { getStorage } from '../hooks/useStorage';
 import { formatDate, getLast30Days, getMonthStart } from './date';
 
+/**
+ * @param {string} dateStr 'YYYY-MM-DD'
+ * @returns {import('../types').Journal | null}
+ */
 export function getJournalForDate(dateStr) {
   return getStorage(`journal_${dateStr}`) || null;
 }

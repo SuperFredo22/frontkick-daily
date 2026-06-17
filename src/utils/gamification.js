@@ -196,6 +196,10 @@ export function computeWinStreak() {
 /* ── Daily ritual ────────────────────────────────────────────────────── */
 
 // XP earned on a single day, from that day's journal object.
+/**
+ * @param {import('../types').Journal} journal
+ * @returns {number}
+ */
 export function dayXP(journal) {
   if (!journal) return 0;
   const missions = (journal.taches || []).filter(t => t.statut === 'fait').length;

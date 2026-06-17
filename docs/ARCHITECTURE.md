@@ -48,6 +48,8 @@ useStorage  ──►  useJournal / useBanques / useAgenda / useProjets / useJal
   VisualViewport pour ne pas masquer les champs).
 - **Config des banques** : source unique dans `src/data/banques.config.js`
   (`BANQUE_CONFIG`, `banqueColor()`). Ne pas redupliquer les maps emoji/couleur.
+- **Types** : formes de données documentées en JSDoc dans `src/types.js`.
+  Annoter les nouvelles structures là, et les référencer via `import('../types')`.
 
 ## Points améliorables (dette technique)
 
@@ -65,8 +67,11 @@ prochaines passes.
 - ✅ **Tests automatisés** : Vitest (jsdom). 27 tests sur la logique pure
   (`utils/date`, `utils/gamification`, `utils/stats`). Lancer `npm test`.
   À étendre vers de nouveaux utilitaires au fil de l'eau.
-- Pas de TypeScript : les formes d'objets (journal, tâche, RDV) sont implicites.
-  Des JSDoc `@typedef` sur les structures clés aideraient déjà beaucoup.
+- ✅ **Types documentés en JSDoc** : `src/types.js` définit les formes
+  persistées (`Journal`, `Tache`, `Habitudes`, `Sport`, `AgendaEvent`, `Projet`,
+  `Jalon`…). Les points centraux (`useJournal`, `dayXP`, `getJournalForDate`)
+  les référencent via `import('../types')`. Une migration TypeScript complète
+  reste possible plus tard, mais l'IDE a déjà l'autocomplétion sur ces objets.
 
 ### Correctness (lint : 0 erreur ✅)
 `npm run lint` passe désormais sans erreur ni avertissement. À maintenir avant
