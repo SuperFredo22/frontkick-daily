@@ -15,12 +15,14 @@ import SuggestionCard from '../components/SuggestionCard';
 import VictoiresDuJour from '../components/today/VictoiresDuJour';
 import ActionsImportantes from '../components/today/ActionsImportantes';
 import BackupBanner from '../components/today/BackupBanner';
+import DisciplinesStrip from '../components/today/DisciplinesStrip';
 import HUD from '../components/HUD';
 import DailyObjective from '../components/DailyObjective';
 import FocusOverlay from '../components/FocusOverlay';
 import { XpFlash, LevelUpOverlay } from '../components/RewardFx';
-import SportModule from '../components/sport/SportModule';
 import Modal from '../components/Modal';
+import SportSheet from '../components/today/SportSheet';
+import CounterModal from '../components/today/CounterModal';
 import LogVideoModal from '../components/LogVideoModal';
 import { VIDEO_FORMATS } from '../data/videoFormats';
 
@@ -402,85 +404,15 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       />
 
       {/* ── Disciplines strip ──────────────────────────────────────────── */}
-      <p className="uppercase tracking-widest text-[11px] font-bold px-5 mt-5 mb-2" style={{ color: 'var(--ink-3)' }}>
-        Disciplines du jour
-      </p>
-      <div
-        className="flex gap-2 px-5 pb-1"
-        style={{ overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
-      >
-        {/* Prières — tap = +1, long press = éditer */}
-        <button
-          className="flex items-center gap-1.5 shrink-0 btn-press"
-          style={{
-            background: (hab.prieres || 0) > 0 ? 'var(--red-50)' : 'var(--surface)',
-            border: `1px solid ${(hab.prieres || 0) > 0 ? '#F4D5D1' : 'var(--line)'}`,
-            borderRadius: 14, padding: '8px 12px',
-            color: (hab.prieres || 0) > 0 ? 'var(--red)' : 'var(--ink-2)',
-            fontSize: 13, fontWeight: 500,
-            userSelect: 'none', WebkitUserSelect: 'none',
-            touchAction: 'none',
-          }}
-          {...prieresLongPress}
-          onContextMenu={e => e.preventDefault()}
-          title="Tap = +1 · Maintenir = éditer"
-        >
-          <span>🙏</span>
-          <span>{hab.prieres || 0}</span>
-        </button>
-
-        {/* Sport */}
-        <button
-          className="flex items-center gap-1.5 shrink-0 btn-press"
-          style={{
-            background: sportDone ? 'var(--green-soft)' : 'var(--surface)',
-            border: `1px solid ${sportDone ? '#86EFAC' : 'var(--line)'}`,
-            borderRadius: 14, padding: '8px 12px',
-            color: sportDone ? 'var(--green)' : 'var(--ink-2)',
-            fontSize: 13, fontWeight: 500,
-          }}
-          onClick={() => setShowSportSheet(true)}
-        >
-          <span>🥊</span>
-          <span>{sportDone ? `✓ ${sportLabel || 'Fait'}` : 'Sport'}</span>
-        </button>
-
-        {/* Cigarettes — tap = +1, long press = éditer */}
-        <button
-          className="flex items-center gap-1.5 shrink-0 btn-press"
-          style={{
-            background: (hab.cigarettes || 0) === 0 ? 'var(--surface)' : 'var(--orange-soft)',
-            border: `1px solid ${(hab.cigarettes || 0) === 0 ? 'var(--line)' : '#F6C89A'}`,
-            borderRadius: 14, padding: '8px 12px',
-            color: (hab.cigarettes || 0) === 0 ? 'var(--green)' : 'var(--orange)',
-            fontSize: 13, fontWeight: 500,
-            userSelect: 'none', WebkitUserSelect: 'none',
-            touchAction: 'none',
-          }}
-          {...cigsLongPress}
-          onContextMenu={e => e.preventDefault()}
-          title="Tap = +1 · Maintenir = éditer"
-        >
-          <span>🚬</span>
-          <span>{hab.cigarettes || 0}</span>
-        </button>
-
-        {/* Note */}
-        <button
-          className="flex items-center gap-1.5 shrink-0 btn-press"
-          style={{
-            background: hab.note ? 'var(--red-50)' : 'var(--surface)',
-            border: `1px solid ${hab.note ? '#F4D5D1' : 'var(--line)'}`,
-            borderRadius: 14, padding: '8px 12px',
-            color: hab.note ? 'var(--ink-2)' : 'var(--ink-3)',
-            fontSize: 13, fontWeight: 500, maxWidth: 140,
-          }}
-          onClick={() => setShowNoteModal(true)}
-        >
-          <span>📝</span>
-          <span className="truncate">{hab.note || 'Note…'}</span>
-        </button>
-      </div>
+      <DisciplinesStrip
+        hab={hab}
+        sportDone={sportDone}
+        sportLabel={sportLabel}
+        prieresProps={prieresLongPress}
+        cigsProps={cigsLongPress}
+        onOpenSport={() => setShowSportSheet(true)}
+        onOpenNote={() => setShowNoteModal(true)}
+      />
 
       {/* ── À faire maintenant ─────────────────────────────────────────── */}
       <section className="px-4 mt-5">
@@ -560,36 +492,15 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       />
 
       {/* ── Sport bottom sheet ─────────────────────────────────────────── */}
-      {showSportSheet && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div
-            className="absolute inset-0"
-            style={{ background: 'rgba(15,23,42,.4)' }}
-            onClick={() => setShowSportSheet(false)}
-          />
-          <div
-            className="relative w-full"
-            style={{
-              maxWidth: 480,
-              background: 'var(--surface)',
-              borderRadius: '24px 24px 0 0',
-              paddingTop: 12,
-              paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
-            }}
-          >
-            <div className="w-8 h-1 rounded-full mx-auto mb-4" style={{ background: 'var(--line)' }} />
-            <div className="px-4">
-              <SportModule
-                journal={journal}
-                onSportSave={handleSportSave}
-                onSportClear={handleSportClear}
-                setAgenda={setAgenda}
-                viewDate={formatDate(viewDate)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <SportSheet
+        open={showSportSheet}
+        onClose={() => setShowSportSheet(false)}
+        journal={journal}
+        onSportSave={handleSportSave}
+        onSportClear={handleSportClear}
+        setAgenda={setAgenda}
+        viewDate={formatDate(viewDate)}
+      />
 
       {/* ── Note modal ─────────────────────────────────────────────────── */}
       <Modal
@@ -617,94 +528,28 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       </Modal>
 
       {/* ── Modal édition prières ──────────────────────────────────────── */}
-      <Modal
+      <CounterModal
         open={showPrieresEdit}
         onClose={() => { if (blockModalCloseRef.current) return; setShowPrieresEdit(false); }}
         title="🙏 Prières"
-        footer={
-          <div className="flex gap-2 w-full">
-            <button
-              onClick={() => { updateHabitude('prieres', 0); setShowPrieresEdit(false); }}
-              className="flex-1 py-2.5 rounded-lg font-medium text-sm btn-press"
-              style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}
-            >
-              Réinitialiser
-            </button>
-            <button
-              onClick={() => { updateHabitude('prieres', editPrieres); setShowPrieresEdit(false); }}
-              className="flex-1 py-2.5 rounded-lg font-medium text-sm btn-press"
-              style={{ background: 'var(--red)', color: 'white' }}
-            >
-              Enregistrer
-            </button>
-          </div>
-        }
-      >
-        <div className="flex items-center justify-center gap-6 py-2">
-          <button
-            onClick={() => setEditPrieres(v => Math.max(0, v - 1))}
-            className="w-12 h-12 rounded-full text-2xl font-bold btn-press flex items-center justify-center"
-            style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}
-          >
-            −
-          </button>
-          <span style={{ fontSize: 40, fontWeight: 800, color: 'var(--ink)', minWidth: 60, textAlign: 'center' }}>
-            {editPrieres}
-          </span>
-          <button
-            onClick={() => setEditPrieres(v => v + 1)}
-            className="w-12 h-12 rounded-full text-2xl font-bold btn-press flex items-center justify-center"
-            style={{ background: 'var(--red)', color: 'white' }}
-          >
-            +
-          </button>
-        </div>
-      </Modal>
+        value={editPrieres}
+        onChange={setEditPrieres}
+        onReset={() => { updateHabitude('prieres', 0); setShowPrieresEdit(false); }}
+        onSave={() => { updateHabitude('prieres', editPrieres); setShowPrieresEdit(false); }}
+        accent="var(--red)"
+      />
 
       {/* ── Modal édition cigarettes ───────────────────────────────────── */}
-      <Modal
+      <CounterModal
         open={showCigsEdit}
         onClose={() => { if (blockModalCloseRef.current) return; setShowCigsEdit(false); }}
         title="🚬 Cigarettes"
-        footer={
-          <div className="flex gap-2 w-full">
-            <button
-              onClick={() => { updateHabitude('cigarettes', 0); setShowCigsEdit(false); }}
-              className="flex-1 py-2.5 rounded-lg font-medium text-sm btn-press"
-              style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}
-            >
-              Réinitialiser
-            </button>
-            <button
-              onClick={() => { updateHabitude('cigarettes', editCigs); setShowCigsEdit(false); }}
-              className="flex-1 py-2.5 rounded-lg font-medium text-sm btn-press"
-              style={{ background: 'var(--orange)', color: 'white' }}
-            >
-              Enregistrer
-            </button>
-          </div>
-        }
-      >
-        <div className="flex items-center justify-center gap-6 py-2">
-          <button
-            onClick={() => setEditCigs(v => Math.max(0, v - 1))}
-            className="w-12 h-12 rounded-full text-2xl font-bold btn-press flex items-center justify-center"
-            style={{ background: 'var(--line-2)', color: 'var(--ink-2)' }}
-          >
-            −
-          </button>
-          <span style={{ fontSize: 40, fontWeight: 800, color: 'var(--ink)', minWidth: 60, textAlign: 'center' }}>
-            {editCigs}
-          </span>
-          <button
-            onClick={() => setEditCigs(v => v + 1)}
-            className="w-12 h-12 rounded-full text-2xl font-bold btn-press flex items-center justify-center"
-            style={{ background: 'var(--orange)', color: 'white' }}
-          >
-            +
-          </button>
-        </div>
-      </Modal>
+        value={editCigs}
+        onChange={setEditCigs}
+        onReset={() => { updateHabitude('cigarettes', 0); setShowCigsEdit(false); }}
+        onSave={() => { updateHabitude('cigarettes', editCigs); setShowCigsEdit(false); }}
+        accent="var(--orange)"
+      />
 
       {/* ── Vidéo tournée hors liste (modal) ───────────────────────────── */}
       <LogVideoModal
