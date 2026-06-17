@@ -13,6 +13,7 @@ npm run dev       # serveur de dev Vite
 npm run build     # build de production (dossier dist/)
 npm run preview   # prévisualise le build
 npm run lint      # ESLint
+npm test          # Vitest (logique pure)
 ```
 
 ## Stack
@@ -30,7 +31,7 @@ api/                 Fonctions serverless Vercel (coach IA, push, cron, health)
 public/              Manifeste PWA, service worker, icônes
 src/
   pages/             Écrans principaux (Aujourdhui, Agenda, Stats, Banques, Coach)
-  components/        UI réutilisable (Modal, HUD, SuggestionCard, sport/, …)
+  components/        UI réutilisable (Modal, HUD, SuggestionCard, today/, banques/, sport/, …)
   hooks/             Logique d'état réutilisable (useStorage, useJournal, useLongPress, …)
   data/              Données de seed + config (banques, séances, jalons)
   utils/             Logique pure (gamification, stats, dates, notifications)

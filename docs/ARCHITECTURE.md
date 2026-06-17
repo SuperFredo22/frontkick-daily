@@ -55,11 +55,16 @@ Classés par priorité. Aucun n'est bloquant ; ce sont des cibles pour les
 prochaines passes.
 
 ### Maintenabilité
-- **`pages/Aujourdhui.jsx` (~880 lignes)** et **`pages/Banques.jsx` (~830 lignes)**
-  sont trop gros. À découper en sous-composants (ex. `HabitudesStrip`,
-  `BonusSection`, `SuggestionStack`) pour faciliter la relecture.
-- Pas de tests automatisés. Une poignée de tests sur `utils/gamification` et
-  `utils/stats` (logique pure, facile à tester) sécuriserait les évolutions.
+- ✅ **Pages découpées.** `Banques.jsx` (835 → ~120 lignes) éclaté en
+  `components/banques/` (`ItemMenu`, `BanqueList`, `ProjetsList`) +
+  `data/banqueTabs.js`. `Aujourdhui.jsx` (888 → ~745 lignes) allégé via
+  `components/today/` (`VictoiresDuJour`, `ActionsImportantes`, `BackupBanner`).
+  `Aujourdhui.jsx` reste le plus gros fichier : la bande « Disciplines du jour »
+  et les sheets/modales (sport, note, prières/cigarettes) pourraient encore être
+  extraites lors d'une prochaine passe.
+- ✅ **Tests automatisés** : Vitest (jsdom). 27 tests sur la logique pure
+  (`utils/date`, `utils/gamification`, `utils/stats`). Lancer `npm test`.
+  À étendre vers de nouveaux utilitaires au fil de l'eau.
 - Pas de TypeScript : les formes d'objets (journal, tâche, RDV) sont implicites.
   Des JSDoc `@typedef` sur les structures clés aideraient déjà beaucoup.
 
