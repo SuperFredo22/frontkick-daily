@@ -6,9 +6,8 @@ l'existant. Mis à jour au fil des passes de qualité.
 ## Vue d'ensemble
 
 Frontkick Daily est une **SPA React** mono-utilisateur, sans backend de
-données : tout l'état persiste dans `localStorage` (préfixe `fk_`). Quelques
-fonctions serverless Vercel (`api/`) gèrent uniquement le coach IA et les
-notifications push.
+données : tout l'état persiste dans `localStorage` (préfixe `fk_`). Une
+fonction serverless Vercel (`api/`) gère uniquement le coach IA.
 
 ### Flux de données
 
@@ -95,9 +94,11 @@ règle produit un faux positif :
   d'origine ni rate-limit). Acceptable pour un usage perso (clé de l'utilisateur),
   mais à ne pas généraliser. Piste : déplacer la clé en variable d'environnement
   serveur + restreindre l'origine.
-- `api/subscribe.js` autorise `Access-Control-Allow-Origin: *` et stocke une
-  seule souscription push publique. OK pour mono-utilisateur, à revoir si
-  multi-appareils.
+
+> Note : les notifications push (workflow GitHub Actions planifié, endpoints
+> `api/cron.js`/`api/subscribe.js`/`api/health.js`, `web-push` + `@vercel/blob`)
+> ont été retirées — la fonctionnalité buggait sur Vercel et générait des mails
+> d'échec de run à chaque cron. À ré-implémenter proprement si besoin un jour.
 
 ### Efficacité
 - `utils/stats` et `utils/gamification` re-balaient l'historique localStorage à

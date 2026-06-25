@@ -3,7 +3,7 @@
 PWA de discipline quotidienne qui transforme tes habitudes (contenu, sport,
 prières, etc.) en **progression de combattant** : XP, niveaux, grades, séries
 de victoires et badges. Tout est stocké **en local** (localStorage), avec un
-coach IA optionnel et des notifications push.
+coach IA optionnel.
 
 ## Démarrage
 
@@ -21,20 +21,19 @@ npm test          # Vitest (logique pure)
 - **React 19** + **Vite 8**
 - **Tailwind CSS 3** + tokens CSS maison (thème sombre) — voir `src/styles/tokens.css`
 - **Recharts** (graphiques de stats), **@dnd-kit** (réordonnancement), **lucide-react** (icônes)
-- **Vercel** pour l'hébergement + fonctions serverless (`api/`) : coach IA (Perplexity),
-  notifications push (web-push + `@vercel/blob`)
+- **Vercel** pour l'hébergement + fonctions serverless (`api/`) : coach IA (Perplexity)
 
 ## Organisation du repo
 
 ```
-api/                 Fonctions serverless Vercel (coach IA, push, cron, health)
+api/                 Fonctions serverless Vercel (coach IA Perplexity)
 public/              Manifeste PWA, service worker, icônes
 src/
   pages/             Écrans principaux (Aujourdhui, Agenda, Stats, Banques, Coach)
   components/        UI réutilisable (Modal, HUD, SuggestionCard, today/, banques/, sport/, …)
   hooks/             Logique d'état réutilisable (useStorage, useJournal, useLongPress, …)
   data/              Données de seed + config (banques, séances, jalons)
-  utils/             Logique pure (gamification, stats, dates, notifications)
+  utils/             Logique pure (gamification, stats, dates)
   styles/            tokens.css (variables de thème)
   index.css          Styles globaux + thème des champs de formulaire
 ```
