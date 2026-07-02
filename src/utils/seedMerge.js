@@ -48,6 +48,24 @@ function mergeBankSeed(key, seed) {
   catch { /* ignore */ }
 }
 
+// One-time migration: remove the old Printful seed tasks from a stored Marque
+// bank (the products won't be sold through Printful). Matched by description
+// so user-created or renamed items are never touched; the replacement tasks
+// (IDs 1005+) arrive via the normal seed merge.
+function purgePrintfulTasks() {
+  const FLAG = 'fk_marque_printful_purged';
+  if (localStorage.getItem(FLAG)) return;
+  let marque;
+  try { marque = JSON.parse(localStorage.getItem('fk_marque')); } catch { marque = null; }
+  if (Array.isArray(marque)) {
+    const next = marque.filter(i => !(i.id >= 1 && i.id <= 4 && /printful/i.test(i.description || '')));
+    if (next.length !== marque.length) {
+      try { localStorage.setItem('fk_marque', JSON.stringify(next)); } catch { /* ignore */ }
+    }
+  }
+  try { localStorage.setItem(FLAG, '1'); } catch { /* ignore */ }
+}
+
 // One-time migration: attach automatic tracking to the original seed jalons
 // (#1 « vidéos ce mois », #3 « entraînements ce trimestre ») for users who
 // already had them stored as manual counters. Runs once, then never again.
@@ -75,6 +93,7 @@ export function mergeNewSeeds() {
   try {
     if (typeof localStorage === 'undefined') return;
     mergeBankSeed('tiktok', tiktokInitial);
+    purgePrintfulTasks();
     mergeBankSeed('marque', marqueInitial);
     migrateJalonSources();
   } catch { /* localStorage unavailable */ }

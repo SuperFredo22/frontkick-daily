@@ -7,7 +7,7 @@ import { useProjets, getNextProjetTask, getActiveProjects } from '../hooks/usePr
 import { useAgenda } from '../hooks/useAgenda';
 import { getConsecutiveNoSportDays } from '../utils/stats';
 import { useProgression } from '../hooks/useProgression';
-import { XP, dayXP, mantraOfTheDay, yesterdayMissed, protectStreak } from '../utils/gamification';
+import { XP, dayXP, sessionXP, mantraOfTheDay, yesterdayMissed, protectStreak } from '../utils/gamification';
 import { newlyUnlockedByLevel } from '../utils/unlockables';
 import { useLongPress } from '../hooks/useLongPress';
 import { banqueColor } from '../data/banques.config';
@@ -218,7 +218,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       habitudes: { ...(prev.habitudes || {}), sport: true },
     }));
     setShowSportSheet(false);
-    flashXp(XP.training);
+    flashXp(sessionXP(sportData));
   };
 
   const handleSportClear = () => {

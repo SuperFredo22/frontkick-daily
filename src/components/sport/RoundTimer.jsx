@@ -1,21 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { beep, unlockAudio } from '../../utils/sound';
 
 function fmt(sec) {
   if (sec < 0) sec = 0;
   return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
-}
-
-function bell(freq = 880, dur = 0.5) {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.frequency.value = freq;
-    g.gain.setValueAtTime(0.35, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    o.start(); o.stop(ctx.currentTime + dur);
-  } catch { /* ignore */ }
 }
 
 const ROUND_PRESETS = [120, 180, 300];
@@ -24,7 +13,9 @@ const REST_PRESETS = [30, 60, 90];
 /**
  * Boxing round timer. Configurable rounds × work / rest, with bells on each
  * transition. On finish, logs a training session whose duration is the total
- * work time. Timestamp-based to survive backgrounding.
+ * work time. The whole session is planned as absolute timestamps at start,
+ * so backgrounding the app (screen lock during shadow boxing) never drifts:
+ * on return the timer lands on the correct round/phase and remaining time.
  */
 export default function RoundTimer({ onFinish, onClose }) {
   const [rounds, setRounds] = useState(3);
@@ -34,63 +25,86 @@ export default function RoundTimer({ onFinish, onClose }) {
   const [round, setRound] = useState(1);
   const [remaining, setRemaining] = useState(180);
   const [doneMinutes, setDoneMinutes] = useState(0);
-  const endRef = useRef(null);
+  const [doneRounds, setDoneRounds] = useState(0);
+  const scheduleRef = useRef([]); // [{ ph, rnd, start, end }] absolute ms
   const phaseRef = useRef('idle');
   const roundRef = useRef(1);
+  const running = phase === 'work' || phase === 'rest';
 
   useEffect(() => {
     let wl = null, dead = false;
     const acquire = async () => { if (!dead && 'wakeLock' in navigator) { try { wl = await navigator.wakeLock.request('screen'); } catch { /* ignore */ } } };
-    if (phase === 'work' || phase === 'rest') acquire();
+    if (running) acquire();
     const onVis = () => { if (document.visibilityState === 'visible' && (phaseRef.current === 'work' || phaseRef.current === 'rest') && !wl) acquire(); };
     document.addEventListener('visibilitychange', onVis);
     return () => { dead = true; wl?.release?.(); document.removeEventListener('visibilitychange', onVis); };
-  }, [phase]);
+  }, [running]);
 
-  const startPhase = (ph, secs, rnd) => {
-    phaseRef.current = ph; roundRef.current = rnd;
-    endRef.current = Date.now() + secs * 1000;
-    setPhase(ph); setRound(rnd); setRemaining(secs);
-  };
-
-  const advance = () => {
-    if (phaseRef.current === 'work') {
-      bell(660, 0.6); // end of round
-      if (roundRef.current >= rounds) { finish(rounds); return; }
-      startPhase('rest', rest, roundRef.current);
-    } else if (phaseRef.current === 'rest') {
-      bell(880, 0.5); // start next round
-      startPhase('work', work, roundRef.current + 1);
+  // Seconds of work actually elapsed at `now`, according to the schedule.
+  const elapsedWorkSecs = (now) => {
+    let secs = 0;
+    for (const seg of scheduleRef.current) {
+      if (seg.ph !== 'work') continue;
+      if (now >= seg.end) secs += (seg.end - seg.start) / 1000;
+      else if (now > seg.start) secs += (now - seg.start) / 1000;
     }
+    return Math.round(secs);
   };
 
-  // Move to the done screen. `completed` = rounds of work fully done.
+  // Move to the done screen. `completed` = rounds of work fully done (natural
+  // end); when omitted (manual stop) the partial current round counts too.
   const finish = (completed) => {
-    const roundsDone = completed != null
+    const now = Date.now();
+    const workSecs = completed != null ? completed * work : elapsedWorkSecs(now);
+    const fullRounds = completed != null
       ? completed
-      : (phaseRef.current === 'work' ? roundRef.current - 1 : roundRef.current);
-    setDoneMinutes(Math.max(1, Math.round((Math.max(0, roundsDone) * work) / 60)));
-    bell(523, 0.9); setTimeout(() => bell(659, 0.9), 250);
+      : Math.max(0, phaseRef.current === 'work' ? roundRef.current - 1 : roundRef.current);
+    setDoneMinutes(Math.max(1, Math.round(workSecs / 60)));
+    setDoneRounds(fullRounds);
+    beep(523, 0.9); setTimeout(() => beep(659, 0.9), 250);
     phaseRef.current = 'done'; setPhase('done');
   };
 
   const save = () => {
-    onFinish?.({ type: 'club', duree_reelle: doneMinutes, notes: `${rounds} rounds × ${Math.round(work / 60)} min` });
+    onFinish?.({ type: 'club', duree_reelle: doneMinutes, notes: `${doneRounds} round${doneRounds > 1 ? 's' : ''} × ${Math.round(work / 60)} min` });
   };
 
-  const begin = () => { bell(880, 0.5); startPhase('work', work, 1); };
+  const begin = () => {
+    unlockAudio();
+    beep(880, 0.5);
+    // Plan every phase up-front as absolute timestamps.
+    const sched = [];
+    let t = Date.now();
+    for (let r = 1; r <= rounds; r++) {
+      sched.push({ ph: 'work', rnd: r, start: t, end: t + work * 1000 });
+      t += work * 1000;
+      if (r < rounds) {
+        sched.push({ ph: 'rest', rnd: r, start: t, end: t + rest * 1000 });
+        t += rest * 1000;
+      }
+    }
+    scheduleRef.current = sched;
+    phaseRef.current = 'work'; roundRef.current = 1;
+    setPhase('work'); setRound(1); setRemaining(work);
+  };
 
-  // Countdown tick (timestamp-based). Placed after advance() so it can call
-  // it without a use-before-define; advance reads live config via refs/state.
+  // Tick: locate the current segment in the schedule by wall clock. Survives
+  // backgrounding across any number of phase transitions.
   useEffect(() => {
-    if (phase !== 'work' && phase !== 'rest') return;
+    if (!running) return;
     const id = setInterval(() => {
-      const rem = Math.max(0, Math.round((endRef.current - Date.now()) / 1000));
-      setRemaining(rem);
-      if (rem <= 0) { clearInterval(id); advance(); }
+      const now = Date.now();
+      const seg = scheduleRef.current.find(s => now < s.end);
+      if (!seg) { clearInterval(id); finish(rounds); return; }
+      if (seg.ph !== phaseRef.current || seg.rnd !== roundRef.current) {
+        beep(seg.ph === 'work' ? 880 : 660, seg.ph === 'work' ? 0.5 : 0.6);
+        phaseRef.current = seg.ph; roundRef.current = seg.rnd;
+        setPhase(seg.ph); setRound(seg.rnd);
+      }
+      setRemaining(Math.max(0, Math.round((seg.end - now) / 1000)));
     }, 250);
     return () => clearInterval(id);
-  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [running]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const total = phase === 'rest' ? rest : work;
   const pct = total > 0 ? 1 - remaining / total : 0;

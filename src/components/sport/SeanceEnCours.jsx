@@ -1,19 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-
-function playBeep(freq = 880, dur = 0.3) {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + dur);
-  } catch { /* audio unavailable */ }
-}
+import { beep, unlockAudio } from '../../utils/sound';
 
 function fmt(sec) {
   if (sec < 0) sec = 0;
@@ -57,6 +43,9 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
   const restDurationRef       = useRef(null);
   const seriesTimerStartRef   = useRef(null);
   const seriesTimerDurRef     = useRef(null);
+  // true quand le chrono a été lancé pour la durée propre de l'exercice
+  // (shadow « 3 min », gainage « 30 sec »…) : sa fin valide la série.
+  const seriesTimerAutoRef    = useRef(false);
 
   const exercices   = seance.exercices;
   const ex          = exercices[currentExIdx];
@@ -66,7 +55,7 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
   const progress    = totalSeries > 0 ? doneSeries / totalSeries : 0;
   const exComplete  = doneThisEx >= ex.series;
   const isWarmup    = ex.nom?.toLowerCase().includes('chauffement');
-  const warmupSecs  = parseDuration(ex.reps);
+  const timedSecs   = parseDuration(ex.reps);
 
   // ── Wake Lock: keep screen on ────────────────────────────────────────────
   useEffect(() => {
@@ -112,25 +101,6 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
     return () => clearInterval(id);
   }, []);
 
-  // Rest timer end — when the countdown reaches 0, beep and clear it. Resetting
-  // to null here is the intended side effect of the timer ending.
-  useEffect(() => {
-    if (restTime === 0) {
-      playBeep(880, 0.35);
-      restStartRef.current = null;
-      setRestTime(null); // eslint-disable-line react-hooks/set-state-in-effect
-    }
-  }, [restTime]);
-
-  // Series timer end — same pattern as the rest timer.
-  useEffect(() => {
-    if (seriesTimer === 0) {
-      playBeep(660, 0.5);
-      seriesTimerStartRef.current = null;
-      setSeriesTimer(null); // eslint-disable-line react-hooks/set-state-in-effect
-    }
-  }, [seriesTimer]);
-
   // ── Helpers ───────────────────────────────────────────────────────────────
   const startRest = (dur) => {
     restStartRef.current = Date.now();
@@ -143,10 +113,12 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
     setRestTime(null);
   };
 
-  const startSeriesTimer = (dur) => {
+  const startSeriesTimer = (dur, auto = false) => {
+    unlockAudio();
     // eslint-disable-next-line react-hooks/purity -- runs on user action, not during render
     seriesTimerStartRef.current = Date.now();
     seriesTimerDurRef.current = dur;
+    seriesTimerAutoRef.current = auto;
     setSeriesTimer(dur);
     setShowPicker(false);
     setCustomSecs('');
@@ -154,8 +126,17 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
 
   const clearSeriesTimer = () => {
     seriesTimerStartRef.current = null;
+    seriesTimerAutoRef.current = false;
     setSeriesTimer(null);
     setShowPicker(false);
+  };
+
+  // Valide une série de l'exercice courant et lance le repos si besoin.
+  const valideSerie = () => {
+    if (exComplete) return;
+    const newDone = doneThisEx + 1;
+    setSeriesDone(prev => prev.map((d, i) => i === currentExIdx ? newDone : d));
+    if (ex.repos > 0 && newDone < ex.series) startRest(ex.repos);
   };
 
   const goTo = (idx) => {
@@ -165,13 +146,35 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
     setShowPicker(false);
   };
 
+  // Rest timer end — when the countdown reaches 0, beep and clear it. Resetting
+  // to null here is the intended side effect of the timer ending.
+  useEffect(() => {
+    if (restTime === 0) {
+      beep(880, 0.35);
+      restStartRef.current = null;
+      setRestTime(null); // eslint-disable-line react-hooks/set-state-in-effect
+    }
+  }, [restTime]);
+
+  // Series timer end — beep, clear, and for a timed exercise (chrono lancé
+  // pour la durée de la série, ex. shadow 3 min) valide la série + repos.
+  useEffect(() => {
+    if (seriesTimer === 0) {
+      beep(660, 0.5);
+      seriesTimerStartRef.current = null;
+      const wasAuto = seriesTimerAutoRef.current;
+      seriesTimerAutoRef.current = false;
+      setSeriesTimer(null); // eslint-disable-line react-hooks/set-state-in-effect
+      if (wasAuto) valideSerie();
+    }
+  }, [seriesTimer]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSerieFaite = () => {
     if (exComplete) return;
+    unlockAudio();
     clearSeriesTimer();
-    const newDone = doneThisEx + 1;
-    setSeriesDone(prev => prev.map((d, i) => i === currentExIdx ? newDone : d));
-    if (ex.repos > 0 && newDone < ex.series) startRest(ex.repos);
+    valideSerie();
   };
 
   const handleTerminer = () => {
@@ -265,24 +268,35 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
               {exComplete ? '✅ Exercice terminé' : '✅ Série faite'}
             </button>
 
-            {/* Chrono button */}
+            {/* Chrono button — direct pour les exercices chronométrés (shadow, gainage…) */}
             {seriesTimer === null && !exComplete && (
-              <button
-                onClick={() => {
-                  if (isWarmup && warmupSecs) {
-                    startSeriesTimer(warmupSecs);
-                  } else {
-                    setShowPicker(p => !p);
+              <>
+                <button
+                  onClick={() => {
+                    if (timedSecs) {
+                      startSeriesTimer(timedSecs, true);
+                    } else {
+                      setShowPicker(p => !p);
+                    }
+                  }}
+                  className="w-full py-2.5 rounded-xl font-medium text-sm"
+                  style={{ ...ctrl, color: 'var(--violet)' }}
+                >
+                  {timedSecs
+                    ? `⏱ ${isWarmup ? "Lancer l'échauffement" : 'Lancer la série'} · ${fmt(timedSecs)}`
+                    : '⏱ Lancer un chrono'
                   }
-                }}
-                className="w-full py-2.5 rounded-xl font-medium text-sm"
-                style={{ ...ctrl, color: 'var(--violet)' }}
-              >
-                {isWarmup && warmupSecs
-                  ? `⏱ Lancer l'échauffement · ${fmt(warmupSecs)}`
-                  : '⏱ Lancer un chrono'
-                }
-              </button>
+                </button>
+                {timedSecs && !showPicker && (
+                  <button
+                    onClick={() => setShowPicker(true)}
+                    className="text-xs underline self-center -mt-1"
+                    style={{ color: 'var(--ink-3)' }}
+                  >
+                    Autre durée
+                  </button>
+                )}
+              </>
             )}
 
             {/* Timer picker */}
