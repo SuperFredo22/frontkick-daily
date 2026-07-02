@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
-import * as Icons from 'lucide-react';
-import { Flame, Trophy, Lock } from 'lucide-react';
+import {
+  Flame, Trophy, Lock, Award,
+  // Icônes des badges (utils/gamification BADGES) : import nommé plutôt que
+  // namespace — `import * as Icons` embarquait les ~1000 icônes lucide dans
+  // le bundle initial.
+  Swords, Target, Crosshair, Shield, Dumbbell, Activity, Wind, Heart, Star, Crown,
+} from 'lucide-react';
+
+const BADGE_ICONS = { Swords, Target, Crosshair, Flame, Shield, Dumbbell, Activity, Wind, Heart, Star, Crown };
 import { getMonthStats, getLast30DaysStats, getCigaretteFreeDays, getJournalForDate, getSportMonthStats, computeSportStreak, getSportLast30Days } from '../utils/stats';
 import { useProgression } from '../hooks/useProgression';
 import { useCosmetics } from '../hooks/useCosmetics';
@@ -78,7 +85,7 @@ function ProgressionHero({ prog }) {
 
 // ── Badge tile ────────────────────────────────────────────────────────────────
 function BadgeTile({ badge }) {
-  const Icon = Icons[badge.icon] || Icons.Award;
+  const Icon = BADGE_ICONS[badge.icon] || Award;
   return (
     <div
       className={`rounded-card p-3 flex flex-col items-center text-center ${badge.unlocked ? '' : 'badge-locked'}`}

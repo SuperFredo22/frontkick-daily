@@ -7,7 +7,7 @@ import { useProjets, getNextProjetTask, getActiveProjects } from '../hooks/usePr
 import { useAgenda } from '../hooks/useAgenda';
 import { getConsecutiveNoSportDays } from '../utils/stats';
 import { useProgression } from '../hooks/useProgression';
-import { XP, dayXP, mantraOfTheDay, yesterdayMissed, protectStreak } from '../utils/gamification';
+import { XP, dayXP, sessionXP, mantraOfTheDay, yesterdayMissed, protectStreak } from '../utils/gamification';
 import { newlyUnlockedByLevel } from '../utils/unlockables';
 import { useLongPress } from '../hooks/useLongPress';
 import { banqueColor } from '../data/banques.config';
@@ -43,6 +43,27 @@ function backupReminderState() {
 export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSettings, onNavigate }) {
   const [viewDate, setViewDate] = useState(today());
   const isYesterday = formatDate(viewDate) !== formatDate(today());
+
+  // PWA laissée ouverte après minuit : « aujourd'hui » capturé au montage est
+  // périmé au retour au premier plan. On resynchronise la vue sur le nouveau
+  // jour — seulement si l'utilisateur regardait l'« aujourd'hui » périmé, pour
+  // ne pas l'arracher à une édition volontaire de la veille.
+  const todayStrRef = useRef(formatDate(today()));
+  useEffect(() => {
+    const sync = () => {
+      const nowStr = formatDate(today());
+      if (nowStr === todayStrRef.current) return;
+      const oldToday = todayStrRef.current;
+      todayStrRef.current = nowStr;
+      setViewDate(prev => (formatDate(prev) === oldToday ? today() : prev));
+    };
+    window.addEventListener('focus', sync);
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      window.removeEventListener('focus', sync);
+      document.removeEventListener('visibilitychange', sync);
+    };
+  }, []);
 
   const [journal, setJournal] = useJournal(viewDate);
   const [reporte, setReporte] = useReporteAujourdhui(viewDate);
@@ -218,7 +239,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
       habitudes: { ...(prev.habitudes || {}), sport: true },
     }));
     setShowSportSheet(false);
-    flashXp(XP.training);
+    flashXp(sessionXP(sportData));
   };
 
   const handleSportClear = () => {

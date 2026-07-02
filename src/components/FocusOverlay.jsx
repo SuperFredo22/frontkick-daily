@@ -1,23 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Pause, Play } from 'lucide-react';
+import { beep, unlockAudio } from '../utils/sound';
 
 const PRESETS = [15, 25, 50];
 
 function fmt(sec) {
   if (sec < 0) sec = 0;
   return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
-}
-
-function beep() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.frequency.value = 760;
-    g.gain.setValueAtTime(0.3, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-    o.start(); o.stop(ctx.currentTime + 0.6);
-  } catch { /* ignore */ }
 }
 
 /**
@@ -55,7 +44,7 @@ export default function FocusOverlay({ label, color = 'var(--red)', onComplete, 
       if (rem <= 0) {
         clearInterval(id);
         setRunning(false);
-        beep();
+        beep(760, 0.6);
         onComplete?.();
       }
     }, 250);
@@ -63,6 +52,7 @@ export default function FocusOverlay({ label, color = 'var(--red)', onComplete, 
   }, [running, onComplete]);
 
   const start = () => {
+    unlockAudio();
     const secs = remainingRef.current > 0 && remainingRef.current < mins * 60 ? remainingRef.current : mins * 60;
     endRef.current = Date.now() + secs * 1000;
     setRemaining(secs);
