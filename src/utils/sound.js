@@ -23,8 +23,11 @@ export function unlockAudio() {
   } catch { /* audio indisponible */ }
 }
 
-/** Bip court (fréquence en Hz, durée en secondes). */
+/** Bip court (fréquence en Hz, durée en secondes) + vibration si supportée
+ *  (téléphone en silencieux pendant l'entraînement : le retour haptique
+ *  reste perceptible même sans le son). */
 export function beep(freq = 880, dur = 0.5, gain = 0.3) {
+  try { navigator.vibrate?.(Math.round(dur * 400)); } catch { /* non supporté */ }
   try {
     const c = getCtx();
     if (!c) return;

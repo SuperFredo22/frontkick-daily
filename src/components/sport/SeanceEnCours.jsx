@@ -256,17 +256,32 @@ export default function SeanceEnCours({ seance, onTerminer, onAbandon }) {
         {restTime === null && (
           <div className="flex flex-col gap-3 mb-4">
 
-            {/* Main CTA */}
-            <button
-              onClick={handleSerieFaite}
-              disabled={exComplete}
-              className="w-full py-4 rounded-2xl font-bold text-base active:scale-95 transition-transform"
-              style={exComplete
-                ? { background: 'var(--surface-3)', color: 'var(--ink-3)', cursor: 'default' }
-                : { background: 'var(--cyan)', color: '#06121A' }}
-            >
-              {exComplete ? '✅ Exercice terminé' : '✅ Série faite'}
-            </button>
+            {/* Main CTA — enchaîne naturellement : série → exercice suivant → fin */}
+            {!exComplete ? (
+              <button
+                onClick={handleSerieFaite}
+                className="w-full py-4 rounded-2xl font-bold text-base active:scale-95 transition-transform"
+                style={{ background: 'var(--cyan)', color: '#06121A' }}
+              >
+                ✅ Série faite
+              </button>
+            ) : currentExIdx < exercices.length - 1 ? (
+              <button
+                onClick={() => goTo(currentExIdx + 1)}
+                className="w-full py-4 rounded-2xl font-bold text-base active:scale-95 transition-transform"
+                style={{ background: 'var(--cyan)', color: '#06121A' }}
+              >
+                ✅ Exercice terminé — suivant ►
+              </button>
+            ) : (
+              <button
+                onClick={handleTerminer}
+                className="w-full py-4 rounded-2xl font-bold text-base text-white active:scale-95 transition-transform"
+                style={{ background: 'var(--grad-fire)' }}
+              >
+                🏆 Séance terminée — enregistrer
+              </button>
+            )}
 
             {/* Chrono button — direct pour les exercices chronométrés (shadow, gainage…) */}
             {seriesTimer === null && !exComplete && (

@@ -26,7 +26,9 @@ export default function RoundTimer({ onFinish, onClose }) {
   const [remaining, setRemaining] = useState(180);
   const [doneMinutes, setDoneMinutes] = useState(0);
   const [doneRounds, setDoneRounds] = useState(0);
+  const [paused, setPaused] = useState(false);
   const scheduleRef = useRef([]); // [{ ph, rnd, start, end }] absolute ms
+  const pausedAtRef = useRef(null);
   const phaseRef = useRef('idle');
   const roundRef = useRef(1);
   const running = phase === 'work' || phase === 'rest';
@@ -51,10 +53,27 @@ export default function RoundTimer({ onFinish, onClose }) {
     return Math.round(secs);
   };
 
+  // Pause = geler l'horloge : à la reprise, tout le planning est décalé de la
+  // durée de la pause, comme si elle n'avait pas existé.
+  const togglePause = () => {
+    if (!paused) {
+      pausedAtRef.current = Date.now();
+      setPaused(true);
+    } else {
+      unlockAudio();
+      const delta = Date.now() - pausedAtRef.current;
+      scheduleRef.current = scheduleRef.current.map(s => ({ ...s, start: s.start + delta, end: s.end + delta }));
+      pausedAtRef.current = null;
+      setPaused(false);
+    }
+  };
+
   // Move to the done screen. `completed` = rounds of work fully done (natural
   // end); when omitted (manual stop) the partial current round counts too.
   const finish = (completed) => {
-    const now = Date.now();
+    // En pause, le temps « utile » s'est arrêté au moment de la pause.
+    const now = paused && pausedAtRef.current ? pausedAtRef.current : Date.now();
+    setPaused(false);
     const workSecs = completed != null ? completed * work : elapsedWorkSecs(now);
     const fullRounds = completed != null
       ? completed
@@ -91,7 +110,7 @@ export default function RoundTimer({ onFinish, onClose }) {
   // Tick: locate the current segment in the schedule by wall clock. Survives
   // backgrounding across any number of phase transitions.
   useEffect(() => {
-    if (!running) return;
+    if (!running || paused) return;
     const id = setInterval(() => {
       const now = Date.now();
       const seg = scheduleRef.current.find(s => now < s.end);
@@ -104,7 +123,7 @@ export default function RoundTimer({ onFinish, onClose }) {
       setRemaining(Math.max(0, Math.round((seg.end - now) / 1000)));
     }, 250);
     return () => clearInterval(id);
-  }, [running]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [running, paused]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const total = phase === 'rest' ? rest : work;
   const pct = total > 0 ? 1 - remaining / total : 0;
@@ -127,8 +146,8 @@ export default function RoundTimer({ onFinish, onClose }) {
           </div>
         ) : (
           <>
-            <p className="uppercase tracking-widest font-display font-bold mb-3" style={{ fontSize: 14, letterSpacing: '0.1em', color: accent }}>
-              {phase === 'done' ? 'Terminé' : phase === 'rest' ? 'Repos' : `Round ${round} / ${rounds}`}
+            <p className="uppercase tracking-widest font-display font-bold mb-3" style={{ fontSize: 14, letterSpacing: '0.1em', color: paused ? 'var(--ink-3)' : accent }}>
+              {phase === 'done' ? 'Terminé' : paused ? 'En pause' : phase === 'rest' ? 'Repos' : `Round ${round} / ${rounds}`}
             </p>
             <div style={{ position: 'relative', width: 300, height: 300 }}>
               <svg width="300" height="300" style={{ transform: 'rotate(-90deg)' }}>
@@ -153,9 +172,14 @@ export default function RoundTimer({ onFinish, onClose }) {
           </button>
         )}
         {(phase === 'work' || phase === 'rest') && (
-          <button onClick={() => finish()} className="btn-press w-full py-3 rounded-xl font-medium text-sm" style={{ background: 'var(--surface-2)', color: 'var(--ink-2)', border: '1px solid var(--line)' }}>
-            Terminer maintenant
-          </button>
+          <div className="flex flex-col gap-3">
+            <button onClick={togglePause} className="btn-press w-full py-4 rounded-2xl font-bold text-white" style={{ background: paused ? 'var(--grad-fire)' : 'var(--surface-2)', color: paused ? '#fff' : 'var(--ink)', border: paused ? 'none' : '1px solid var(--line)', fontSize: 16 }}>
+              {paused ? '▶ Reprendre' : '⏸ Pause'}
+            </button>
+            <button onClick={() => finish()} className="btn-press w-full py-3 rounded-xl font-medium text-sm" style={{ background: 'var(--surface-2)', color: 'var(--ink-2)', border: '1px solid var(--line)' }}>
+              Terminer maintenant
+            </button>
+          </div>
         )}
         {phase === 'done' && (
           <button onClick={save} className="btn-press w-full py-4 rounded-2xl font-bold text-white" style={{ background: 'var(--grad-fire)', fontSize: 16 }}>
