@@ -36,7 +36,7 @@ useStorage  ──►  useJournal / useBanques / useAgenda / useProjets / useJal
 | Agenda       | Calendrier hebdo + RDV (récurrents) + blocs travail dérivés des horaires |
 | Stats        | Graphiques (Recharts), jalons, badges                       |
 | Banques      | Gestion des « banques » de contenu (TikTok, FightFocus, …), projets et prospects |
-| Coach        | Chat IA (Perplexity via proxy serverless)                   |
+| Coach        | Actions IA à un tap (plan du jour, séance, idées, relances, bilan) + chat (Perplexity via proxy serverless) |
 
 ### Modules transverses
 
@@ -61,6 +61,26 @@ useStorage  ──►  useJournal / useBanques / useAgenda / useProjets / useJal
   reste un `SportType` existant pour ne pas casser stats et XP.
   `utils/sportHistory.js` retrouve la dernière perf d'un exercice dans
   l'historique (hint « Dernière fois… » + bouton Reprendre).
+
+### Coach IA (pages/Coach.jsx)
+
+Le coach n'est pas un simple chat : l'écran propose des **actions à un tap**
+(plan d'attaque du jour, préparation de séance, idées de vidéos, messages de
+relance prospects, bilan hebdo) qui envoient des prompts ciblés exploitant le
+contexte complet construit par `utils/dataAnalyst.js` (30 j d'historique,
+horaires de travail, prospects dus, dernières séances détaillées avec
+exercices/matériel).
+
+Deux actions demandent au modèle un **bloc JSON structuré** en fin de réponse
+(`{"seance": …}` / `{"idees": …}`) : `utils/coachActions.js` l'extrait
+(fencé ou nu, testé), le masque du texte affiché et le rend actionnable —
+« Enregistrer comme séance du jour » (refuse d'écraser une séance existante)
+et « Ajouter à la banque TikTok ». C'est ce qui rend le coach utile : ses
+réponses créent des données dans l'app au lieu de rester du texte.
+
+Note : l'ancienne carte « Notifications push » a été retirée (le workflow
+cron côté serveur a été supprimé ; `api/cron.js`/`api/subscribe.js` restent
+des endpoints orphelins sans appelant).
 
 ### Safe areas (PWA iOS)
 
