@@ -32,11 +32,30 @@ useStorage  ──►  useJournal / useBanques / useAgenda / useProjets / useJal
 
 | Écran        | Rôle                                                        |
 |--------------|-------------------------------------------------------------|
-| Aujourdhui   | Cœur du jour : missions suggérées, habitudes, actions, HUD  |
-| Agenda       | Calendrier hebdo + RDV (récurrents)                          |
+| Aujourdhui   | Cœur du jour : missions suggérées, habitudes, actions, HUD, horaires de travail du jour, relances prospects |
+| Agenda       | Calendrier hebdo + RDV (récurrents) + blocs travail dérivés des horaires |
 | Stats        | Graphiques (Recharts), jalons, badges                       |
-| Banques      | Gestion des « banques » de contenu (TikTok, FightFocus, …)  |
+| Banques      | Gestion des « banques » de contenu (TikTok, FightFocus, …), projets et prospects |
 | Coach        | Chat IA (Perplexity via proxy serverless)                   |
+
+### Modules transverses
+
+- **Horaires de travail** (`fk_travail`, `utils/travail.js`, `useTravail`) :
+  semaine type (un horaire par jour) + exceptions par date (`null` = repos).
+  Les blocs travail de l'agenda sont **dérivés** à l'affichage (jamais stockés
+  comme événements), donc modifier la semaine type met à jour tout le
+  calendrier. L'éditeur est `components/WorkScheduleModal.jsx`, ouvert depuis
+  l'agenda (💼 / clic sur un bloc) ou l'écran Aujourd'hui (chip 💼, qui édite
+  aussi l'exception du jour).
+- **Prospects** (`fk_prospects`, `utils/prospects.js`, `useProspects`) : CRM
+  léger — statut (à contacter → gagné/perdu), date de relance, notes. Onglet
+  « Prospects » de l'Arsenal (`components/banques/ProspectsList.jsx`) ; les
+  relances dues remontent en bannière sur Aujourd'hui via `dueProspects()`.
+- **Séance libre** (`components/sport/SeanceLibre.jsx`) : séance improvisée
+  avec lieu, matériel (bandes de résistance, barre de traction…), exercices
+  détaillés (séries × reps × charge) et durée. Stockée dans `Journal.sport`
+  avec les champs optionnels `lieu`, `materiel`, `exercices` — le `type`
+  reste un `SportType` existant pour ne pas casser stats et XP.
 
 ### Conventions
 

@@ -5,6 +5,10 @@ import { useJournal, useReporteAujourdhui } from '../hooks/useJournal';
 import { useAllBanques } from '../hooks/useBanques';
 import { useProjets, getNextProjetTask, getActiveProjects } from '../hooks/useProjets';
 import { useAgenda } from '../hooks/useAgenda';
+import { useTravail } from '../hooks/useTravail';
+import { useProspects } from '../hooks/useProspects';
+import { workBlockForDate, hasWorkSchedule } from '../utils/travail';
+import { dueProspects } from '../utils/prospects';
 import { getConsecutiveNoSportDays } from '../utils/stats';
 import { useProgression } from '../hooks/useProgression';
 import { XP, dayXP, sessionXP, mantraOfTheDay, yesterdayMissed, protectStreak } from '../utils/gamification';
@@ -22,6 +26,7 @@ import FocusOverlay from '../components/FocusOverlay';
 import { XpFlash, LevelUpOverlay } from '../components/RewardFx';
 import Modal from '../components/Modal';
 import SportSheet from '../components/today/SportSheet';
+import WorkScheduleModal from '../components/WorkScheduleModal';
 import CounterModal from '../components/today/CounterModal';
 import LogVideoModal from '../components/LogVideoModal';
 import { VIDEO_FORMATS } from '../data/videoFormats';
@@ -40,7 +45,7 @@ function backupReminderState() {
   return { last, days };
 }
 
-export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSettings, onNavigate }) {
+export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSettings, onNavigate, onOpenProspects }) {
   const [viewDate, setViewDate] = useState(today());
   const isYesterday = formatDate(viewDate) !== formatDate(today());
 
@@ -68,6 +73,8 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const [journal, setJournal] = useJournal(viewDate);
   const [reporte, setReporte] = useReporteAujourdhui(viewDate);
   const [, setAgenda] = useAgenda();
+  const [travail, setTravail] = useTravail();
+  const [prospects] = useProspects();
   const { markDone, markUndone, getNextItem } = useAllBanques();
   const [projets, setProjets] = useProjets();
 
@@ -97,6 +104,7 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
   const [heroFading, setHeroFading] = useState(false);
   const [showSportSheet, setShowSportSheet] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showWorkModal, setShowWorkModal] = useState(false);
   const [showLogVideo, setShowLogVideo] = useState(false);
   const [backupDismissed, setBackupDismissed] = useState(false);
 
@@ -318,6 +326,11 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
 
   const noSportDays = getConsecutiveNoSportDays();
 
+  // Horaires de travail du jour affiché + relances prospects dues aujourd'hui.
+  const todayWork = workBlockForDate(travail, formatDate(viewDate));
+  const workConfigured = hasWorkSchedule(travail);
+  const dueRelances = dueProspects(prospects, formatDate(today()));
+
   // Rappel de sauvegarde : si des données existent et qu'aucun export récent
   // (> 7 j) n'a été fait, on invite à exporter pour ne plus jamais tout perdre.
   const { last: lastBackup, days: daysSinceBackup } = backupReminderState();
@@ -424,6 +437,41 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
         onDismiss={() => setBackupDismissed(true)}
       />
 
+      {/* Relances prospects dues aujourd'hui */}
+      {!isYesterday && dueRelances.length > 0 && (
+        <button
+          onClick={() => onOpenProspects?.()}
+          className="mx-4 mt-2 rounded-xl px-4 py-2.5 flex items-center gap-3 text-left btn-press"
+          style={{ background: 'var(--cyan-soft)', border: '1px solid rgba(0,180,216,0.3)' }}
+        >
+          <span className="text-xl">📇</span>
+          <p className="text-sm font-medium flex-1" style={{ color: 'var(--cyan)' }}>
+            {dueRelances.length} prospect{dueRelances.length > 1 ? 's' : ''} à relancer
+            {' '}({dueRelances.slice(0, 2).map(p => p.nom).join(', ')}{dueRelances.length > 2 ? '…' : ''})
+          </p>
+          <span style={{ color: 'var(--cyan)', fontSize: 12 }}>›</span>
+        </button>
+      )}
+
+      {/* Horaires de travail du jour */}
+      <div className="px-4 mt-2">
+        <button
+          onClick={() => setShowWorkModal(true)}
+          className="w-full flex items-center justify-between rounded-xl px-4 py-2.5 btn-press"
+          style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
+        >
+          <span className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--ink-2)' }}>
+            <span>💼</span>
+            {todayWork
+              ? <span>Travail {todayWork.debut} – {todayWork.fin}{todayWork.exception ? ' (modifié)' : ''}</span>
+              : workConfigured
+              ? <span>Repos {isYesterday ? 'ce jour-là' : "aujourd'hui"}</span>
+              : <span>Renseigner mes horaires de travail</span>}
+          </span>
+          <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>Modifier ›</span>
+        </button>
+      </div>
+
       {/* ── Disciplines strip ──────────────────────────────────────────── */}
       <DisciplinesStrip
         hab={hab}
@@ -521,6 +569,16 @@ export default function Aujourdhui({ pendingCompose, onPendingConsumed, onOpenSe
         onSportClear={handleSportClear}
         setAgenda={setAgenda}
         viewDate={formatDate(viewDate)}
+      />
+
+      {/* ── Horaires de travail (semaine type + exception du jour) ────── */}
+      <WorkScheduleModal
+        open={showWorkModal}
+        onClose={() => setShowWorkModal(false)}
+        travail={travail}
+        setTravail={setTravail}
+        focusDate={formatDate(viewDate)}
+        focusLabel={isYesterday ? formatDateFR(viewDate) : "Aujourd'hui"}
       />
 
       {/* ── Note modal ─────────────────────────────────────────────────── */}

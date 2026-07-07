@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { useTikTok, useFightFocus, useMarque } from '../hooks/useBanques';
 import { useProjets } from '../hooks/useProjets';
+import { useProspects } from '../hooks/useProspects';
 import BanqueList from '../components/banques/BanqueList';
 import ProjetsList from '../components/banques/ProjetsList';
+import ProspectsList from '../components/banques/ProspectsList';
 import { TABS } from '../data/banqueTabs';
 
 // ─── Main Banques page ────────────────────────────────────────────────────────
@@ -16,13 +18,14 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
   const [fightfocus, setFightFocus] = useFightFocus();
   const [marque, setMarque] = useMarque();
   const [projets, setProjets] = useProjets();
+  const [prospects, setProspects] = useProspects();
 
   // One-shot compose command from the parent (FAB): switch to the right tab.
   // setState-in-effect is intentional (it's the command's side effect); the
   // command is consumed immediately so the effect doesn't loop.
   useEffect(() => {
     if (!pendingCompose) return;
-    if (['tiktok', 'fightfocus', 'marque', 'projets'].includes(pendingCompose)) {
+    if (['tiktok', 'fightfocus', 'marque', 'projets', 'prospects'].includes(pendingCompose)) {
       setActiveTab(pendingCompose); // eslint-disable-line react-hooks/set-state-in-effect
       setFilterStatus('all');
       onPendingConsumed?.();
@@ -36,7 +39,7 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
 
   const filterOptions = activeTab === 'tiktok'
     ? [{ id: 'all', label: 'Toutes' }, { id: 'a_tourner', label: 'À tourner' }, { id: 'publiee', label: 'Publiées' }]
-    : activeTab === 'projets'
+    : activeTab === 'projets' || activeTab === 'prospects'
     ? []
     : [{ id: 'all', label: 'Toutes' }, { id: 'a_faire', label: 'À faire' }, { id: 'fait', label: 'Faites' }];
 
@@ -101,7 +104,11 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
       )}
 
       <div className="flex-1 overflow-auto px-4 pt-1 pb-nav" style={{ background: 'var(--bg)' }}>
-        {activeTab !== 'projets' ? (
+        {activeTab === 'projets' ? (
+          <ProjetsList projets={projets} setProjets={setProjets} />
+        ) : activeTab === 'prospects' ? (
+          <ProspectsList prospects={prospects} setProspects={setProspects} searchQuery={searchQuery} />
+        ) : (
           <BanqueList
             key={activeTab}
             banque={activeTab}
@@ -110,8 +117,6 @@ export default function Banques({ pendingCompose, onPendingConsumed }) {
             searchQuery={searchQuery}
             filterStatus={filterStatus}
           />
-        ) : (
-          <ProjetsList projets={projets} setProjets={setProjets} />
         )}
       </div>
     </div>
