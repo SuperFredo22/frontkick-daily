@@ -1,4 +1,7 @@
 import { formatDate } from './date';
+import { workBlockForDate, hoursBetween, hasWorkSchedule } from './travail';
+import { dueProspects, isOpenProspect, statutConfig } from './prospects';
+import { exerciseSummary } from './sportHistory';
 
 const DOW_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
@@ -71,6 +74,22 @@ export function analyzeData() {
   const sessions = sportDays.map(d => d.journal?.sport).filter(Boolean);
   const sportTypes = {};
   sessions.forEach(s => { if (s.type) sportTypes[s.type] = (sportTypes[s.type] || 0) + 1; });
+
+  // Dernières séances détaillées (nom, durée, matériel, exercices) — les plus
+  // récentes d'abord, pour que le coach propose des progressions cohérentes.
+  const dernieresSeances = sportDays.slice(0, 5)
+    .filter(d => d.journal?.sport)
+    .map(d => {
+      const s = d.journal.sport;
+      return {
+        date: formatDate(d.date),
+        nom: s.seance_nom || s.notes || s.type || 'Séance',
+        duree: s.duree_reelle || 0,
+        materiel: s.materiel || [],
+        exercices: (s.exercices || []).map(e => `${e.nom} (${exerciseSummary(e) || '—'})`),
+      };
+    })
+    .slice(0, 3);
 
   // ── Correlations ───────────────────────────────────────────────────────────
   const avgCigsSport   = avg(sportDays.map(d => d.journal?.habitudes?.cigarettes || 0));
@@ -164,6 +183,29 @@ export function analyzeData() {
     });
   } catch { /* skip malformed projets */ }
 
+  // ── Horaires de travail ───────────────────────────────────────────────────
+  const travailRaw = readLS('travail');
+  const workToday = workBlockForDate(travailRaw, todayStr);
+  const travail = {
+    configured: hasWorkSchedule(travailRaw),
+    today: workToday
+      ? { debut: workToday.debut, fin: workToday.fin, heures: hoursBetween(workToday.debut, workToday.fin), exception: !!workToday.exception }
+      : null,
+  };
+
+  // ── Prospects ─────────────────────────────────────────────────────────────
+  const prospectsRaw = readLS('prospects') || [];
+  const prospectsOuverts = prospectsRaw.filter(isOpenProspect);
+  const prospects = {
+    ouverts: prospectsOuverts.length,
+    dus: dueProspects(prospectsRaw, todayStr).map(p => ({
+      nom: p.nom,
+      entreprise: p.entreprise || '',
+      statut: statutConfig(p.statut).label,
+      notes: p.notes || '',
+    })),
+  };
+
   // ── Alerts ────────────────────────────────────────────────────────────────
   const alerts = [];
   if (today.prieres === 0)
@@ -182,6 +224,8 @@ export function analyzeData() {
     alerts.push({ level: 'insight', msg: `Tu complètes ${(avgTasksSport - avgTasksNoSport).toFixed(1)} tâche(s) de plus les jours avec sport` });
   if (agendaToday.length > 0)
     alerts.push({ level: 'info', msg: `${agendaToday.length} événement(s) à l'agenda aujourd'hui` });
+  if (prospects.dus.length > 0)
+    alerts.push({ level: 'warning', msg: `${prospects.dus.length} prospect(s) à relancer aujourd'hui` });
 
   return {
     today,
@@ -199,6 +243,9 @@ export function analyzeData() {
     agenda:       { today: agendaToday, upcoming: agendaUpcoming },
     banques:      { tiktokPending, fightfocusPending, marquePending },
     projets:      projetsSummary,
+    travail,
+    prospects,
+    dernieresSeances,
     alerts,
     daysWithData: days.filter(d => d.journal).length,
   };
@@ -206,8 +253,40 @@ export function analyzeData() {
 
 export function buildSystemPrompt(analysis) {
   if (!analysis) return '';
-  const { today, averages, streaks, sport, correlations, tasks, patterns, recentNotes, agenda, banques, projets } = analysis;
+  const { today, averages, streaks, sport, correlations, tasks, patterns, recentNotes, agenda, banques, projets, travail, prospects, dernieresSeances } = analysis;
   const sportTypeStr = Object.entries(sport.types).map(([k, v]) => `${k}(${v})`).join(', ') || 'non précisé';
+
+  // ── Travail section ───────────────────────────────────────────────────────
+  let travailSection = '';
+  if (travail?.configured) {
+    travailSection = travail.today
+      ? `\nTravail aujourd'hui : ${travail.today.debut}–${travail.today.fin} (${travail.today.heures}h)${travail.today.exception ? ' [horaire exceptionnel]' : ''} — le temps libre est avant/après.`
+      : `\nTravail aujourd'hui : repos (pas de travail prévu).`;
+  }
+
+  // ── Prospects section ─────────────────────────────────────────────────────
+  let prospectsSection = '';
+  if (prospects && (prospects.ouverts > 0 || prospects.dus.length > 0)) {
+    prospectsSection = `\nProspects business : ${prospects.ouverts} ouverts`;
+    if (prospects.dus.length > 0) {
+      prospectsSection += ` | À RELANCER AUJOURD'HUI :\n` + prospects.dus.map(p => {
+        let line = `  • ${p.nom}${p.entreprise ? ` (${p.entreprise})` : ''} — ${p.statut}`;
+        if (p.notes) line += ` — notes : "${p.notes}"`;
+        return line;
+      }).join('\n');
+    }
+  }
+
+  // ── Dernières séances détaillées ──────────────────────────────────────────
+  let seancesSection = '';
+  if (dernieresSeances?.length) {
+    seancesSection = '\nDernières séances détaillées :\n' + dernieresSeances.map(s => {
+      let line = `  • ${s.date} : ${s.nom}${s.duree ? ` (${s.duree} min)` : ''}`;
+      if (s.materiel.length) line += ` — matériel : ${s.materiel.join(', ')}`;
+      if (s.exercices.length) line += `\n    ${s.exercices.join(' | ')}`;
+      return line;
+    }).join('\n');
+  }
 
   // ── Agenda section ────────────────────────────────────────────────────────
   let agendaSection = '';
@@ -256,24 +335,24 @@ export function buildSystemPrompt(analysis) {
     ? `\nTâches bonus aujourd'hui : ${today.bonus.join(', ')}`
     : '';
 
-  return `Tu es le coach personnel de l'utilisateur — il pratique les arts martiaux (MMA, kickboxing, BJJ), crée du contenu TikTok sur le combat, gère un site web FightFocus et une marque de vêtements de combat.
+  return `Tu es le coach personnel de l'utilisateur — il pratique les arts martiaux (MMA, kickboxing, BJJ), crée du contenu TikTok sur le combat, gère un site web FightFocus et une marque de vêtements de combat. Il a aussi un travail salarié (horaires ci-dessous) et suit des prospects business. Son matériel de sport : barre de traction, bandes de résistance 15/25/35 kg, poids du corps.
 
 DONNÉES 30 DERNIERS JOURS (${analysis.daysWithData} jours avec données) :
 Habitudes :
 - Prières : ${averages.prieres.toFixed(1)}/j en moy. | streak actuel : ${streaks.prieres}j consécutifs
 - Cigarettes : ${averages.cigarettes.toFixed(1)}/j en moy. | pire jour : ${patterns.worstCigDay} (${patterns.worstCigAvg.toFixed(1)}/j)
-- Sport : ${sport.sessions} séances | types : ${sportTypeStr} | durée moy : ${Math.round(sport.avgDuration)}min | sans sport depuis : ${streaks.noSport}j
+- Sport : ${sport.sessions} séances | types : ${sportTypeStr} | durée moy : ${Math.round(sport.avgDuration)}min | sans sport depuis : ${streaks.noSport}j${seancesSection}
 
 Corrélations détectées :
 - Cigarettes jours sport : ${correlations.cigsSport.toFixed(1)}/j vs sans sport : ${correlations.cigsNoSport.toFixed(1)}/j
 - Tâches complétées jours sport : ${correlations.tasksSport.toFixed(1)} vs sans sport : ${correlations.tasksNoSport.toFixed(1)}
 - ${tasks.faites} tâches complétées en 30j
 ${banquesSection}
-${projetsSection}
+${projetsSection}${prospectsSection}
 
 AUJOURD'HUI :
-Prières : ${today.prieres} | Cigarettes : ${today.cigarettes} | Sport : ${today.sport ? 'fait ✓' : 'pas encore'} | Tâches : ${today.tachesFaites} complétées${bonusSection}${agendaSection}${notesSection}
+Prières : ${today.prieres} | Cigarettes : ${today.cigarettes} | Sport : ${today.sport ? 'fait ✓' : 'pas encore'} | Tâches : ${today.tachesFaites} complétées${travailSection}${bonusSection}${agendaSection}${notesSection}
 
-INSTRUCTIONS : Réponds en français, en texte brut sans aucun formatage markdown (zéro **, *, #, tirets de liste). Parle comme un coach humain — direct, sans fioritures, max 4 phrases sauf si on te demande plus. Signal d'alerte en premier. Actions concrètes uniquement. Tiens compte de l'agenda dans tes conseils.`;
+INSTRUCTIONS : Réponds en français, en texte brut sans aucun formatage markdown (zéro **, *, #, tirets de liste). Parle comme un coach humain — direct, sans fioritures, max 4 phrases sauf si on te demande plus. Signal d'alerte en premier. Actions concrètes uniquement. Tiens compte de l'agenda et des horaires de travail dans tes conseils. Exception unique au "pas de markdown" : quand on te demande explicitement un bloc \`\`\`json, fournis-le exactement au format demandé, en toute fin de réponse.`;
 }
 

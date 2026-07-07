@@ -1,14 +1,48 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Bot, Send, Key, AlertTriangle, Info, Lightbulb, ShieldAlert, RefreshCw, Bell, BellOff } from 'lucide-react';
+import { Bot, Send, Key, AlertTriangle, Info, Lightbulb, ShieldAlert, RefreshCw } from 'lucide-react';
 import { analyzeData, buildSystemPrompt } from '../utils/dataAnalyst';
 import { askCoach } from '../utils/perplexity';
-import { getNotificationStatus, subscribeToNotifications, unsubscribeFromNotifications } from '../utils/notifications';
+import { extractStructured, parseSeance, parseIdees, saveSeanceToJournal } from '../utils/coachActions';
+import { useTikTok } from '../hooks/useBanques';
 import { formatDate } from '../utils/date';
 
 const API_KEY_STORAGE = 'fk_perplexity_key';
 const TODAY           = formatDate(new Date());
 const SESSION_KEY     = `fk_coach_session_${TODAY}`;
 const BILANS_KEY      = 'fk_coach_bilans';
+
+// Actions à un tap — chacune envoie un prompt ciblé qui exploite les données
+// de l'app (horaires de travail, prospects, historique des séances…). Les
+// actions `seance` et `idees` demandent en plus un bloc JSON structuré que
+// l'app sait transformer en action concrète (enregistrer la séance, ajouter
+// les idées à la banque TikTok).
+const QUICK_ACTIONS = [
+  {
+    id: 'plan', emoji: '⚡', label: "Plan d'attaque du jour",
+    desc: 'Créneaux concrets autour du travail',
+    prompt: "Fais-moi un plan d'attaque concret pour aujourd'hui : tiens compte de mes horaires de travail, de mon agenda, de mes missions en attente et de mes prospects à relancer. Propose des créneaux horaires réalistes dans mon temps libre, et termine par LA priorité numéro 1.",
+  },
+  {
+    id: 'seance', emoji: '🥊', label: 'Prépare ma séance',
+    desc: 'Selon ton matériel et tes dernières perfs',
+    prompt: "Prépare-moi une séance pour aujourd'hui, adaptée à mon matériel (barre de traction, bandes 15/25/35 kg, poids du corps), à mes dernières séances détaillées (progresse par rapport aux charges précédentes) et à mon temps libre autour du travail. Explique la séance en 3-4 phrases max, puis termine par un bloc ```json exactement de cette forme : {\"seance\": {\"titre\": \"...\", \"lieu\": \"exterieur\", \"duree\": 30, \"materiel\": [\"Barre de traction\", \"Bande 25 kg\"], \"exercices\": [{\"nom\": \"...\", \"series\": 4, \"reps\": \"8\", \"charge\": \"bande 25 kg\"}]}}",
+  },
+  {
+    id: 'idees', emoji: '🎬', label: '3 idées de vidéos',
+    desc: 'Nouvelles, hors banque actuelle',
+    prompt: "Propose-moi 3 idées de vidéos TikTok nouvelles qui ne sont pas déjà dans ma banque, en phase avec l'actualité du combat si possible. Une phrase d'angle pour chacune, puis termine par un bloc ```json exactement de cette forme : {\"idees\": [\"titre 1\", \"titre 2\", \"titre 3\"]}",
+  },
+  {
+    id: 'relance', emoji: '📇', label: 'Messages de relance',
+    desc: 'Prêts à envoyer à tes prospects',
+    prompt: "Rédige-moi un court message de relance prêt à envoyer pour chacun de mes prospects à relancer (ou, s'il n'y en a pas de dus aujourd'hui, pour mes prospects ouverts les plus importants, max 3). Tiens compte de leurs notes. Ton direct et humain, pas de blabla commercial.",
+  },
+  {
+    id: 'bilan', emoji: '📊', label: 'Bilan de la semaine',
+    desc: 'Ce qui progresse, ce qui décroche',
+    prompt: 'Fais le bilan de mes 7 derniers jours : ce qui progresse, ce qui décroche (sport, cigarettes, missions, prospects), et donne-moi 3 actions concrètes pour la semaine qui vient.',
+  },
+];
 
 function saveBilan(text) {
   try {
@@ -39,10 +73,10 @@ function stripMd(text) {
 
 function AlertBadge({ level }) {
   const map = {
-    danger:  { Icon: ShieldAlert,   color: 'var(--red)',    bg: '#FFF1F1' },
-    warning: { Icon: AlertTriangle, color: '#D97706',       bg: '#FFFBEB' },
-    info:    { Icon: Info,          color: 'var(--cyan)',   bg: '#F0FFFE' },
-    insight: { Icon: Lightbulb,     color: '#7C3AED',       bg: '#F5F3FF' },
+    danger:  { Icon: ShieldAlert,   color: 'var(--red)',    bg: 'var(--red-soft)' },
+    warning: { Icon: AlertTriangle, color: 'var(--orange)', bg: 'var(--orange-soft)' },
+    info:    { Icon: Info,          color: 'var(--cyan)',   bg: 'var(--cyan-soft)' },
+    insight: { Icon: Lightbulb,     color: 'var(--violet)', bg: 'var(--violet-soft)' },
   };
   return map[level] || map.info;
 }
@@ -83,9 +117,65 @@ function InsightsPanel({ alerts, analysis }) {
   );
 }
 
-function ChatBubble({ msg }) {
+// Carte d'action sous une réponse du coach contenant une séance structurée.
+function SeanceActionCard({ seance, saved, onSave }) {
+  return (
+    <div className="mx-4 rounded-2xl p-3" style={{ background: 'var(--surface)', border: '1px solid rgba(0,180,216,0.35)' }}>
+      <p className="text-sm font-bold mb-1" style={{ color: 'var(--ink)' }}>
+        🥊 {seance.seance_nom}{seance.duree_reelle ? ` · ${seance.duree_reelle} min` : ''}
+      </p>
+      {seance.exercices.map((e, i) => (
+        <p key={i} className="text-xs" style={{ color: 'var(--ink-2)' }}>
+          • {e.nom}{e.series ? ` — ${e.series} × ${e.reps || '?'}` : e.reps ? ` — ${e.reps}` : ''}{e.charge ? ` · ${e.charge}` : ''}
+        </p>
+      ))}
+      {seance.materiel.length > 0 && (
+        <p className="text-xs mt-1" style={{ color: 'var(--ink-3)' }}>Matériel : {seance.materiel.join(', ')}</p>
+      )}
+      <button
+        onClick={onSave}
+        disabled={saved}
+        className="w-full mt-2 py-2 rounded-lg text-xs font-bold btn-press disabled:opacity-60"
+        style={{ background: saved ? 'var(--green-soft)' : 'var(--cyan)', color: saved ? 'var(--green)' : '#06121A' }}
+      >
+        {saved ? '✓ Enregistrée comme sport du jour' : '💾 Enregistrer comme séance du jour'}
+      </button>
+    </div>
+  );
+}
+
+// Carte d'action pour des idées de vidéos structurées.
+function IdeesActionCard({ idees, added, onAdd }) {
+  return (
+    <div className="mx-4 rounded-2xl p-3 flex flex-col gap-1.5" style={{ background: 'var(--surface)', border: '1px solid rgba(255,87,87,0.35)' }}>
+      <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Ajouter à la banque TikTok</p>
+      {idees.map((titre, i) => {
+        const done = added.includes(i);
+        return (
+          <div key={i} className="flex items-center gap-2">
+            <p className="text-xs flex-1 leading-snug" style={{ color: 'var(--ink-2)' }}>{titre}</p>
+            <button
+              onClick={() => onAdd(i)}
+              disabled={done}
+              className="text-xs font-bold px-2.5 py-1.5 rounded-lg shrink-0 btn-press disabled:opacity-60"
+              style={{ background: done ? 'var(--green-soft)' : 'var(--red)', color: done ? 'var(--green)' : '#fff' }}
+            >
+              {done ? '✓' : '＋ Ajouter'}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Bulle de chat. Les messages du coach sont analysés : si un bloc JSON
+// structuré est présent (séance, idées), il est masqué du texte et rendu
+// comme carte d'action par le parent.
+function ChatBubble({ msg, displayText }) {
   const isUser = msg.role === 'user';
-  const text   = isUser ? msg.text : stripMd(msg.text);
+  const text   = isUser ? (msg.label || msg.text) : stripMd(displayText ?? msg.text);
+  if (!text) return null;
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} px-4`}>
       <div
@@ -151,95 +241,6 @@ function SetupCard({ onSave }) {
   );
 }
 
-const NOTIF_STATUS_LABELS = {
-  'unsupported':            { label: 'Non supporté sur cet appareil',     color: 'var(--ink-3)' },
-  'denied':                 { label: 'Bloqué dans les réglages iPhone',    color: 'var(--red)'   },
-  'default':                { label: 'Non activé',                         color: 'var(--ink-3)' },
-  'granted-not-subscribed': { label: 'Permission accordée, non inscrit',  color: '#D97706'       },
-  'subscribed':             { label: '✓ Actif — 9 rappels par jour',       color: '#16A34A'      },
-};
-
-function NotifCard() {
-  const [status, setStatus]   = useState('default');
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
-
-  useEffect(() => {
-    getNotificationStatus().then(setStatus).catch(() => setStatus('unsupported'));
-  }, []);
-
-  const isSubscribed  = status === 'subscribed';
-  const isUnsupported = status === 'unsupported';
-  const isDenied      = status === 'denied';
-
-  const handleToggle = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      if (isSubscribed) {
-        await unsubscribeFromNotifications();
-        setStatus('default');
-      } else {
-        await subscribeToNotifications();
-        setStatus('subscribed');
-      }
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const info = NOTIF_STATUS_LABELS[status] || NOTIF_STATUS_LABELS['default'];
-
-  return (
-    <div className="rounded-2xl p-4 mx-4" style={{ background: 'var(--line-2)' }}>
-      <div className="flex items-center gap-2 mb-1">
-        <Bell size={15} style={{ color: isSubscribed ? '#16A34A' : 'var(--ink-3)' }} />
-        <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Notifications push</p>
-      </div>
-      <p className="text-xs mb-1" style={{ color: info.color, fontWeight: 600 }}>{info.label}</p>
-      {!isSubscribed && !isUnsupported && !isDenied && (
-        <p className="text-xs mb-3 leading-relaxed" style={{ color: 'var(--ink-3)' }}>
-          Reçois jusqu'à 9 rappels personnalisés par jour directement sur ton iPhone.{' '}
-          <span style={{ color: 'var(--red)', fontWeight: 600 }}>App installée requise</span>{' '}
-          (Ajouter à l'écran d'accueil) + iOS 16.4+.
-        </p>
-      )}
-      {isDenied && (
-        <p className="text-xs mb-3 leading-relaxed" style={{ color: 'var(--ink-3)' }}>
-          Autorise les notifications dans <strong>Réglages → Frontkick Daily → Notifications</strong>.
-        </p>
-      )}
-      {isUnsupported && (
-        <p className="text-xs leading-relaxed" style={{ color: 'var(--ink-3)' }}>
-          Installe l'app (Ajouter à l'écran d'accueil depuis Safari) et assure-toi d'être sur iOS 16.4+.
-        </p>
-      )}
-      {error && <p className="text-xs mb-2" style={{ color: 'var(--red)' }}>{error}</p>}
-      {!isUnsupported && !isDenied && (
-        <button
-          onClick={handleToggle}
-          disabled={loading}
-          className="w-full py-2.5 rounded-xl font-semibold text-sm btn-press"
-          style={{
-            background: isSubscribed ? 'transparent' : 'var(--red)',
-            color: isSubscribed ? 'var(--ink-3)' : '#fff',
-            border: isSubscribed ? '1px solid var(--line)' : 'none',
-            opacity: loading ? 0.5 : 1,
-          }}
-        >
-          {loading ? '…' : isSubscribed ? (
-            <span className="flex items-center justify-center gap-1.5"><BellOff size={13} /> Désactiver les notifications</span>
-          ) : (
-            <span className="flex items-center justify-center gap-1.5"><Bell size={13} /> Activer les notifications</span>
-          )}
-        </button>
-      )}
-    </div>
-  );
-}
-
 export default function Coach() {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '');
   const [messages, setMessages] = useState(() => {
@@ -252,6 +253,7 @@ export default function Coach() {
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
   const bottomRef = useRef(null);
+  const [, setTiktok] = useTikTok();
 
   const analysis = useMemo(() => {
     try { return analyzeData(); } catch { return null; }
@@ -277,9 +279,11 @@ export default function Coach() {
     content: m.text,
   }));
 
-  async function sendMessage(text) {
+  // `label` : libellé court affiché à la place du prompt complet des actions
+  // rapides (le prompt entier part quand même à l'API).
+  async function sendMessage(text, label) {
     if (!text.trim() || loading) return;
-    setMessages(prev => [...prev, { role: 'user', text: text.trim() }]);
+    setMessages(prev => [...prev, { role: 'user', text: text.trim(), label }]);
     setInput('');
     setError('');
     setLoading(true);
@@ -303,7 +307,27 @@ export default function Coach() {
     setApiKey(key);
   };
 
+  // ── Actions structurées sur les réponses du coach ─────────────────────────
+
+  const handleSaveSeance = (msgIndex, seance) => {
+    const ok = saveSeanceToJournal(TODAY, seance);
+    setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, seanceSaved: true } : m));
+    if (!ok) setError('Une séance est déjà enregistrée aujourd\'hui — modifie-la depuis l\'écran Combat.');
+  };
+
+  const handleAddIdee = (msgIndex, ideeIndex, titre) => {
+    setTiktok(prev => [
+      ...prev,
+      { id: Date.now(), titre, format: 'Idée coach', discipline: 'Tous', priorite: 'HAUTE', statut: 'a_tourner' },
+    ]);
+    setMessages(prev => prev.map((m, i) =>
+      i === msgIndex ? { ...m, ideesAdded: [...(m.ideesAdded || []), ideeIndex] } : m
+    ));
+  };
+
   const chatStarted = messages.length > 0;
+
+  const runQuickAction = (action) => sendMessage(action.prompt, `${action.emoji} ${action.label}`);
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg)' }}>
@@ -344,7 +368,29 @@ export default function Coach() {
             {!chatStarted && (
               <>
                 <InsightsPanel alerts={analysis?.alerts || []} analysis={analysis} />
-                <NotifCard />
+
+                {/* Actions à un tap — le cœur du coach */}
+                <div className="px-4 flex flex-col gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>
+                    Que veux-tu que je prépare ?
+                  </p>
+                  {QUICK_ACTIONS.map(a => (
+                    <button
+                      key={a.id}
+                      onClick={() => runQuickAction(a)}
+                      disabled={loading}
+                      className="flex items-center gap-3 rounded-2xl px-4 py-3 text-left btn-press"
+                      style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
+                    >
+                      <span className="text-xl shrink-0">{a.emoji}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-bold" style={{ color: 'var(--ink)' }}>{a.label}</span>
+                        <span className="block text-xs" style={{ color: 'var(--ink-3)' }}>{a.desc}</span>
+                      </span>
+                      <span style={{ color: 'var(--ink-3)' }}>›</span>
+                    </button>
+                  ))}
+                </div>
               </>
             )}
 
@@ -357,9 +403,33 @@ export default function Coach() {
               </div>
             )}
 
-            {/* Messages */}
+            {/* Messages + cartes d'action */}
             <div className="flex flex-col gap-2">
-              {messages.map((m, i) => <ChatBubble key={i} msg={m} />)}
+              {messages.map((m, i) => {
+                if (m.role === 'user') return <ChatBubble key={i} msg={m} />;
+                const { text: clean, data } = extractStructured(m.text);
+                const seance = data ? parseSeance(data) : null;
+                const idees  = !seance && data ? parseIdees(data) : null;
+                return (
+                  <div key={i} className="flex flex-col gap-2">
+                    <ChatBubble msg={m} displayText={clean} />
+                    {seance && (
+                      <SeanceActionCard
+                        seance={seance}
+                        saved={!!m.seanceSaved}
+                        onSave={() => handleSaveSeance(i, seance)}
+                      />
+                    )}
+                    {idees && (
+                      <IdeesActionCard
+                        idees={idees}
+                        added={m.ideesAdded || []}
+                        onAdd={(ideeIndex) => handleAddIdee(i, ideeIndex, idees[ideeIndex])}
+                      />
+                    )}
+                  </div>
+                );
+              })}
               {loading && (
                 <div className="flex justify-start px-4">
                   <div className="rounded-2xl px-4 py-3" style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
@@ -372,21 +442,25 @@ export default function Coach() {
               )}
             </div>
 
-            {/* Bouton bilan — uniquement si pas encore de conversation aujourd'hui */}
-            {!chatStarted && !loading && (
-              <div className="px-4">
-                <button
-                  onClick={() => sendMessage('Bonjour ! Fais-moi un bilan rapide de ma situation actuelle et donne-moi 1 priorité concrète pour aujourd\'hui.')}
-                  className="w-full py-4 rounded-2xl font-bold text-base text-white btn-press"
-                  style={{ background: 'var(--red)', letterSpacing: '0.01em' }}
-                >
-                  Démarre mon bilan du jour
-                </button>
-              </div>
-            )}
-
             <div ref={bottomRef} />
           </div>
+
+          {/* Actions rapides compactes une fois la conversation lancée */}
+          {chatStarted && (
+            <div className="flex gap-1.5 px-3 pb-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+              {QUICK_ACTIONS.map(a => (
+                <button
+                  key={a.id}
+                  onClick={() => runQuickAction(a)}
+                  disabled={loading}
+                  className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium btn-press disabled:opacity-50"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--ink-2)' }}
+                >
+                  {a.emoji} {a.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Input bar */}
           <div
