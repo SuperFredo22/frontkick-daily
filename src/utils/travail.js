@@ -59,6 +59,24 @@ export function totalWorkHours(travail, dateStrs) {
   }, 0);
 }
 
+// Heures de travail du mois de `ref` : `done` = jours écoulés (≤ ref),
+// `planned` = mois entier, exceptions comprises.
+export function monthWorkHours(travail, ref = new Date()) {
+  const y = ref.getFullYear();
+  const m = ref.getMonth();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  let done = 0, planned = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const b = workBlockForDate(travail, ds);
+    if (!b) continue;
+    const h = hoursBetween(b.debut, b.fin);
+    planned += h;
+    if (d <= ref.getDate()) done += h;
+  }
+  return { done, planned };
+}
+
 // 7.5 → '7h30', 8 → '8h'
 export function formatHeures(n) {
   const h = Math.floor(n);

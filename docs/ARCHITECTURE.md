@@ -51,11 +51,24 @@ useStorage  ──►  useJournal / useBanques / useAgenda / useProjets / useJal
   léger — statut (à contacter → gagné/perdu), date de relance, notes. Onglet
   « Prospects » de l'Arsenal (`components/banques/ProspectsList.jsx`) ; les
   relances dues remontent en bannière sur Aujourd'hui via `dueProspects()`.
+  « Relancé ✓ » loggue une action bonus dans le journal du jour via
+  `utils/journalLog.js` (écriture localStorage hors React — l'écran
+  Aujourd'hui relit au montage).
 - **Séance libre** (`components/sport/SeanceLibre.jsx`) : séance improvisée
   avec lieu, matériel (bandes de résistance, barre de traction…), exercices
   détaillés (séries × reps × charge) et durée. Stockée dans `Journal.sport`
   avec les champs optionnels `lieu`, `materiel`, `exercices` — le `type`
   reste un `SportType` existant pour ne pas casser stats et XP.
+  `utils/sportHistory.js` retrouve la dernière perf d'un exercice dans
+  l'historique (hint « Dernière fois… » + bouton Reprendre).
+
+### Safe areas (PWA iOS)
+
+`viewport-fit=cover` + status bar `black-translucent` : le contenu passe sous
+la barre d'état. Le `<main>` de `App.jsx` porte `padding-top:
+env(safe-area-inset-top)` (et le padding bas pour la nav) — ne pas le retirer,
+sinon les boutons d'en-tête (« Hier », menu…) deviennent inaccessibles sous
+l'heure/batterie iOS.
 
 ### Conventions
 

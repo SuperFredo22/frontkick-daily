@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  workBlockForDate, hoursBetween, totalWorkHours, formatHeures, hasWorkSchedule,
+  workBlockForDate, hoursBetween, totalWorkHours, monthWorkHours, formatHeures, hasWorkSchedule,
 } from './travail';
 
 // 2026-07-06 est un lundi, 2026-07-07 un mardi, 2026-07-12 un dimanche.
@@ -56,6 +56,23 @@ describe('totalWorkHours', () => {
     // lundi 8h + mardi (exception) 5h + dimanche 0h
     const dates = ['2026-07-06', '2026-07-07', '2026-07-12'];
     expect(totalWorkHours(travail, dates)).toBe(13);
+  });
+});
+
+describe('monthWorkHours', () => {
+  it('sépare heures écoulées et heures prévues du mois, exceptions comprises', () => {
+    // Juillet 2026 : lundis = 6, 13, 20, 27 ; mardis = 7, 14, 21, 28.
+    // Semaine type : lun 8h + mar 8h. Exceptions : mar 7 → 5h, lun 13 → repos.
+    // Prévu : 4 lundis (−1 repos) × 8h + 3 mardis × 8h + mar 7 (5h) = 53h.
+    // Écoulé au 7 : lun 6 (8h) + mar 7 (5h) = 13h.
+    const t = { ...travail, horaires: { 1: { debut: '09:00', fin: '17:00' }, 2: { debut: '09:00', fin: '17:00' } } };
+    const { done, planned } = monthWorkHours(t, new Date(2026, 6, 7));
+    expect(done).toBe(13);
+    expect(planned).toBe(53);
+  });
+
+  it('renvoie zéro sans planning', () => {
+    expect(monthWorkHours({ horaires: {}, exceptions: {} }, new Date(2026, 6, 7))).toEqual({ done: 0, planned: 0 });
   });
 });
 

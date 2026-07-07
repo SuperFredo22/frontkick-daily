@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from '../Modal';
 import { formatDate, today } from '../../utils/date';
+import { addBonusToJournal } from '../../utils/journalLog';
 import {
   PROSPECT_STATUTS, statutConfig, isOpenProspect, dueProspects, sortProspects,
 } from '../../utils/prospects';
@@ -71,6 +72,16 @@ export default function ProspectsList({ prospects, setProspects, searchQuery }) 
     setShowForm(false);
   };
 
+  // « Relancé ✓ » : loggue une action bonus dans le journal du jour (+XP via
+  // le moteur existant), passe le prospect en « Contacté » et efface la date
+  // de relance (à re-planifier via la fiche si besoin).
+  const markRelance = (p) => {
+    addBonusToJournal(todayStr, `📇 Relance : ${p.nom}`);
+    setProspects(prev => prev.map(x =>
+      x.id === p.id ? { ...x, statut: 'contacte', relanceDate: null } : x
+    ));
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <button
@@ -112,10 +123,10 @@ export default function ProspectsList({ prospects, setProspects, searchQuery }) 
             const st = statutConfig(p.statut);
             const due = dueIds.has(p.id);
             return (
-              <button
+              <div
                 key={p.id}
                 onClick={() => openEdit(p)}
-                className="text-left rounded-xl p-3 btn-press"
+                className="rounded-xl p-3 btn-press cursor-pointer"
                 style={{
                   background: 'var(--surface)',
                   border: `1px solid ${due ? 'rgba(255,87,87,0.4)' : 'var(--line)'}`,
@@ -144,7 +155,16 @@ export default function ProspectsList({ prospects, setProspects, searchQuery }) 
                 {p.notes && (
                   <p className="text-xs mt-1 truncate" style={{ color: 'var(--ink-3)' }}>{p.notes}</p>
                 )}
-              </button>
+                {due && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); markRelance(p); }}
+                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold btn-press"
+                    style={{ background: 'var(--green)', color: '#06180F' }}
+                  >
+                    ✓ Relancé aujourd'hui (+10 XP)
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import Modal from '../Modal';
+import { formatDate, today } from '../../utils/date';
+import { lastExerciseEntry, exerciseSummary } from '../../utils/sportHistory';
 
 // Lieux proposés — chacun mappe vers un SportType existant pour que les
 // stats par type (club/gym/maison/autre) continuent de fonctionner.
@@ -151,50 +153,76 @@ function Form({ onClose, onSave }) {
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">Exercices</p>
           <div className="flex flex-col gap-2">
-            {exos.map((e, i) => (
-              <div key={e.id} className="rounded-xl p-2" style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <input
-                    value={e.nom}
-                    onChange={ev => setExo(e.id, { nom: ev.target.value })}
-                    placeholder={i === 0 ? 'Ex : Tractions pronation' : `Exercice ${i + 1}`}
-                    className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm"
-                  />
-                  {exos.length > 1 && (
-                    <button
-                      onClick={() => removeExo(e.id)}
-                      className="text-sm px-2 py-1 rounded-lg shrink-0"
-                      style={{ color: 'var(--ink-3)', background: 'var(--line-2)' }}
-                    >
-                      ✕
-                    </button>
+            {exos.map((e, i) => {
+              // Historique : dernière perf du même exercice (séances passées),
+              // pour se situer et reprendre séries/reps/charge en un tap.
+              const hist = e.nom.trim().length >= 3
+                ? lastExerciseEntry(e.nom, formatDate(today()))
+                : null;
+              const histSummary = hist ? exerciseSummary(hist.exercice) : '';
+              return (
+                <div key={e.id} className="rounded-xl p-2" style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <input
+                      value={e.nom}
+                      onChange={ev => setExo(e.id, { nom: ev.target.value })}
+                      placeholder={i === 0 ? 'Ex : Tractions pronation' : `Exercice ${i + 1}`}
+                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm"
+                    />
+                    {exos.length > 1 && (
+                      <button
+                        onClick={() => removeExo(e.id)}
+                        className="text-sm px-2 py-1 rounded-lg shrink-0"
+                        style={{ color: 'var(--ink-3)', background: 'var(--line-2)' }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={e.series}
+                      onChange={ev => setExo(e.id, { series: ev.target.value })}
+                      placeholder="Séries"
+                      className="w-1/4 border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
+                    />
+                    <span className="text-xs shrink-0" style={{ color: 'var(--ink-3)' }}>×</span>
+                    <input
+                      value={e.reps}
+                      onChange={ev => setExo(e.id, { reps: ev.target.value })}
+                      placeholder="Reps"
+                      className="w-1/4 border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
+                    />
+                    <input
+                      value={e.charge}
+                      onChange={ev => setExo(e.id, { charge: ev.target.value })}
+                      placeholder="Charge (bande 25 kg…)"
+                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
+                    />
+                  </div>
+                  {histSummary && (
+                    <div className="flex items-center justify-between gap-2 mt-1.5">
+                      <p className="text-xs truncate" style={{ color: 'var(--ink-3)' }}>
+                        Dernière fois ({new Date(`${hist.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}) : {histSummary}
+                      </p>
+                      <button
+                        onClick={() => setExo(e.id, {
+                          series: hist.exercice.series ? String(hist.exercice.series) : '',
+                          reps: hist.exercice.reps || '',
+                          charge: hist.exercice.charge || '',
+                        })}
+                        className="text-xs font-semibold px-2 py-1 rounded-lg shrink-0 btn-press"
+                        style={{ background: 'var(--cyan-soft)', color: 'var(--cyan)' }}
+                      >
+                        Reprendre
+                      </button>
+                    </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={e.series}
-                    onChange={ev => setExo(e.id, { series: ev.target.value })}
-                    placeholder="Séries"
-                    className="w-1/4 border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
-                  />
-                  <span className="text-xs shrink-0" style={{ color: 'var(--ink-3)' }}>×</span>
-                  <input
-                    value={e.reps}
-                    onChange={ev => setExo(e.id, { reps: ev.target.value })}
-                    placeholder="Reps"
-                    className="w-1/4 border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
-                  />
-                  <input
-                    value={e.charge}
-                    onChange={ev => setExo(e.id, { charge: ev.target.value })}
-                    placeholder="Charge (bande 25 kg…)"
-                    className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <button
             onClick={() => setExos(prev => [...prev, emptyExo()])}
