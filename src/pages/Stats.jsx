@@ -10,6 +10,9 @@ import {
 
 const BADGE_ICONS = { Swords, Target, Crosshair, Flame, Shield, Dumbbell, Activity, Wind, Heart, Star, Crown };
 import { getMonthStats, getLast30DaysStats, getCigaretteFreeDays, getJournalForDate, getSportMonthStats, computeSportStreak, getSportLast30Days } from '../utils/stats';
+import { getStorage } from '../hooks/useStorage';
+import { totalWorkHours, monthWorkHours, formatHeures, hasWorkSchedule } from '../utils/travail';
+import { startOfWeek, addDays, formatDate } from '../utils/date';
 import { useProgression } from '../hooks/useProgression';
 import { useCosmetics } from '../hooks/useCosmetics';
 import { computeUnlocks } from '../utils/unlockables';
@@ -219,6 +222,14 @@ export default function Stats() {
   const [sportMonth] = useState(getSportMonthStats);
   const [sportStreak] = useState(computeSportStreak);
   const [sportDaily] = useState(getSportLast30Days);
+  // Heures de travail dérivées des horaires (fk_travail) : null si non renseignées.
+  const [workHours] = useState(() => {
+    const travail = getStorage('travail');
+    if (!hasWorkSchedule(travail)) return null;
+    const monday = startOfWeek(new Date());
+    const weekDates = Array.from({ length: 7 }, (_, i) => formatDate(addDays(monday, i)));
+    return { week: totalWorkHours(travail, weekDates), ...monthWorkHours(travail) };
+  });
 
   const handleBarClick = (data) => {
     if (!data?.activePayload?.[0]?.payload?.date) return;
@@ -280,6 +291,18 @@ export default function Stats() {
           </div>
         )}
       </section>
+
+      {/* Heures de travail */}
+      {workHours && (
+        <section>
+          <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--ink-3)' }}>💼 Heures de travail</h2>
+          <div className="flex gap-2">
+            <StatBox label="Cette semaine" value={formatHeures(workHours.week)} color="var(--ink)" sub="prévues" />
+            <StatBox label="Ce mois-ci" value={formatHeures(workHours.done)} color="var(--ink)" sub="effectuées" />
+            <StatBox label="Ce mois-ci" value={formatHeures(workHours.planned)} color="var(--ink-2)" sub="prévues au total" />
+          </div>
+        </section>
+      )}
 
       {/* Prières 30 jours */}
       <section>

@@ -37,7 +37,7 @@ export default function App() {
   }
 
   const handleCompose = (action) => {
-    if (['tiktok', 'fightfocus', 'marque', 'projets'].includes(action)) {
+    if (['tiktok', 'fightfocus', 'marque', 'projets', 'prospects'].includes(action)) {
       setPage('banques');
     } else if (action === 'agenda') {
       setPage('agenda');
@@ -49,9 +49,11 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg)' }}>
-      <main className="flex-1 overflow-hidden min-h-0" style={{ paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
+      {/* padding-top : viewport-fit=cover + barre d'état translucide (iOS PWA)
+          font passer le contenu sous l'heure/batterie sans cet inset. */}
+      <main className="flex-1 overflow-hidden min-h-0" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
         <Suspense fallback={<PageLoader />}>
-          {page === 'today'   && <div className="h-full overflow-auto"><Aujourdhui pendingCompose={pendingCompose} onPendingConsumed={clearPending} onOpenSettings={() => setShowSettings(true)} onNavigate={setPage} /></div>}
+          {page === 'today'   && <div className="h-full overflow-auto"><Aujourdhui pendingCompose={pendingCompose} onPendingConsumed={clearPending} onOpenSettings={() => setShowSettings(true)} onNavigate={setPage} onOpenProspects={() => handleCompose('prospects')} /></div>}
           {page === 'agenda'  && <Agenda pendingCompose={pendingCompose} onPendingConsumed={clearPending} />}
           {page === 'stats'   && <div className="h-full overflow-auto"><Stats /></div>}
           {page === 'coach'   && <div className="h-full overflow-hidden flex flex-col"><Coach /></div>}

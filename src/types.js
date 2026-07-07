@@ -47,12 +47,24 @@
  */
 
 /**
+ * @typedef {Object} SportExercice
+ * Exercice d'une séance libre (improvisée).
+ * @property {string} nom
+ * @property {?number} series
+ * @property {?string} reps            Texte libre : '12', 'max'…
+ * @property {?string} charge          Texte libre : 'bande 25 kg', '+10 kg'…
+ */
+
+/**
  * @typedef {Object} Sport
  * Séance d'entraînement détaillée du jour.
  * @property {SportType} type
  * @property {number} [duree_reelle]   Durée en minutes (sert au calcul d'XP).
  * @property {string} [seance_nom]
  * @property {string} [notes]
+ * @property {string} [lieu]           Séance libre : 'exterieur'|'maison'|'salle'|'club'.
+ * @property {string[]} [materiel]     Séance libre : matériel utilisé (bandes, barre…).
+ * @property {SportExercice[]} [exercices]  Séance libre : détail des exercices.
  */
 
 /**
@@ -99,6 +111,38 @@
  * @property {string} couleur             Une des PROJET_PALETTE.
  * @property {string} [echeance]          'YYYY-MM-DD'
  * @property {ProjetTache[]} taches
+ */
+
+/**
+ * @typedef {Object} TravailHoraire
+ * @property {string} debut               'HH:MM'
+ * @property {string} fin                 'HH:MM'
+ */
+
+/**
+ * @typedef {Object} Travail
+ * Horaires de travail (clé localStorage `fk_travail`). Voir utils/travail.js.
+ * @property {Object<string, TravailHoraire>} horaires
+ *   Semaine type, indexée par jour JS ('0' = dimanche … '6' = samedi).
+ * @property {Object<string, ?TravailHoraire>} exceptions
+ *   Écarts ponctuels par date 'YYYY-MM-DD' ; `null` = repos exceptionnel.
+ */
+
+/**
+ * @typedef {'a_contacter'|'contacte'|'relance'|'gagne'|'perdu'} ProspectStatut
+ */
+
+/**
+ * @typedef {Object} Prospect
+ * Prospect du CRM léger (clé localStorage `fk_prospects`).
+ * @property {number} id
+ * @property {string} nom
+ * @property {string} [entreprise]
+ * @property {string} [contact]           Tél, mail, insta… texte libre.
+ * @property {ProspectStatut} statut
+ * @property {?string} relanceDate        'YYYY-MM-DD' — prochaine relance.
+ * @property {string} [notes]
+ * @property {number} creeLe              Timestamp de création.
  */
 
 /**

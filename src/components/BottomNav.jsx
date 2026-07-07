@@ -17,6 +17,7 @@ const COMPOSE_OPTIONS = [
   { id: 'divider' },
   { id: 'agenda',     emoji: '📅', label: 'Nouveau RDV',         color: 'var(--surface-3)' },
   { id: 'bonus',      emoji: '⚡', label: 'Mission bonus',        color: 'var(--violet)' },
+  { id: 'prospects',  emoji: '📇', label: 'Prospect',            color: 'var(--green)' },
 ];
 
 function TabItem({ label, Icon, active, onClick }) {

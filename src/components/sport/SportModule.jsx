@@ -3,6 +3,7 @@ import Modal from '../Modal';
 import SeanceSelector from './SeanceSelector';
 import SeanceEnCours from './SeanceEnCours';
 import SeanceRecap from './SeanceRecap';
+import SeanceLibre from './SeanceLibre';
 import RoundTimer from './RoundTimer';
 
 const TYPE_LABELS = { club: 'Club MMA', gym: 'Gym', maison: 'Maison', autre: 'Autre' };
@@ -75,20 +76,28 @@ function AutreModal({ open, onClose, onSave }) {
 
 function SportDoneRow({ sport, onClear }) {
   const label = sport.seance_nom || sport.notes || TYPE_LABELS[sport.type] || 'Sport';
+  // Détail des séances libres : nombre d'exercices + matériel utilisé.
+  const detail = [
+    sport.exercices?.length ? `${sport.exercices.length} exercice${sport.exercices.length > 1 ? 's' : ''}` : null,
+    sport.materiel?.length ? sport.materiel.join(' · ') : null,
+  ].filter(Boolean).join(' — ');
   return (
-    <div className="flex items-center justify-between py-2 border-b border-gray-50">
-      <span className="text-sm font-medium text-gray-700">🥊 Sport</span>
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-green-600">
-          ✓ {label}{sport.duree_reelle ? ` · ${sport.duree_reelle} min` : ''}
-        </span>
-        <button
-          onClick={onClear}
-          className="text-xs text-gray-400 px-2 py-1 rounded-lg bg-gray-100 active:bg-gray-200"
-        >
-          ↩️ Modifier
-        </button>
+    <div className="py-2 border-b border-gray-50">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-700">🥊 Sport</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-green-600">
+            ✓ {label}{sport.duree_reelle ? ` · ${sport.duree_reelle} min` : ''}
+          </span>
+          <button
+            onClick={onClear}
+            className="text-xs text-gray-400 px-2 py-1 rounded-lg bg-gray-100 active:bg-gray-200"
+          >
+            ↩️ Modifier
+          </button>
+        </div>
       </div>
+      {detail && <p className="text-xs text-gray-400 mt-1">{detail}</p>}
     </div>
   );
 }
@@ -168,6 +177,13 @@ export default function SportModule({ journal, onSportSave, onSportClear, setAge
           ))}
         </div>
         <button
+          onClick={() => setStep('libre')}
+          className="btn-press w-full mt-2 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2"
+          style={{ background: 'var(--cyan-soft)', color: 'var(--cyan)', border: '1px solid rgba(0,180,216,0.35)' }}
+        >
+          ✍️ Séance libre (improvisée)
+        </button>
+        <button
           onClick={() => setStep('rounds')}
           className="btn-press w-full mt-2 py-2.5 rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2"
           style={{ background: 'var(--grad-fire)' }}
@@ -186,6 +202,12 @@ export default function SportModule({ journal, onSportSave, onSportClear, setAge
         open={step === 'autre'}
         onClose={() => setStep(null)}
         onSave={handleAutreSave}
+      />
+
+      <SeanceLibre
+        open={step === 'libre'}
+        onClose={() => setStep(null)}
+        onSave={entry => { onSportSave(entry); setStep(null); }}
       />
 
       <SeanceSelector

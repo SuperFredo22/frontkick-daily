@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { addDays, startOfWeek, formatDate, formatDayShort, isSameDay } from '../utils/date';
 import { useAgenda } from '../hooks/useAgenda';
+import { useTravail } from '../hooks/useTravail';
+import { workBlockForDate, totalWorkHours, formatHeures, hasWorkSchedule } from '../utils/travail';
 import Modal from '../components/Modal';
+import WorkScheduleModal from '../components/WorkScheduleModal';
 
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6h à 23h
 
@@ -28,16 +31,44 @@ function EventBlock({ event, onClick }) {
   );
 }
 
+// Bloc « travail » dérivé des horaires (semaine type + exceptions) : affiché
+// derrière les RDV, cliquer dessus ouvre l'éditeur d'horaires sur ce jour.
+function WorkBlock({ work, onClick }) {
+  const debut = Math.max(timeToMinutes(work.debut), 360); // la grille démarre à 6h
+  const fin = Math.min(timeToMinutes(work.fin), 24 * 60);
+  if (fin <= debut) return null;
+  const top = ((debut - 360) / 60) * 56;
+  const height = Math.max(((fin - debut) / 60) * 56, 28);
+  return (
+    <div
+      onClick={onClick}
+      className="absolute left-0 right-1 rounded-lg px-1.5 py-0.5 cursor-pointer overflow-hidden"
+      style={{
+        top, height, zIndex: 1,
+        background: 'var(--surface-3)',
+        border: work.exception ? '1px dashed var(--orange)' : '1px dashed var(--line)',
+        color: 'var(--ink-2)', fontSize: 10, lineHeight: '13px',
+      }}
+    >
+      <div className="font-semibold truncate">💼 {work.debut}</div>
+      <div className="truncate opacity-80">Travail</div>
+    </div>
+  );
+}
+
 const EMPTY_FORM = { titre: '', date: formatDate(new Date()), heureDebut: '', heureFin: '', lieu: '', note: '', recurrent: false };
 
 export default function Agenda() {
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date()));
   const [agenda, setAgenda] = useAgenda();
+  const [travail, setTravail] = useTravail();
   const [showForm, setShowForm] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [workModal, setWorkModal] = useState(null); // null | { focusDate?, focusLabel? }
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const weekHours = totalWorkHours(travail, days.map(formatDate));
 
   const eventsForDay = (date) => {
     const dateStr = formatDate(date);
@@ -97,12 +128,40 @@ export default function Agenda() {
       {/* Week navigation */}
       <div className="px-4 py-2 flex items-center justify-between" style={{ background: 'var(--surface)', borderBottom: '1px solid var(--line)' }}>
         <button onClick={() => setWeekStart(w => addDays(w, -7))} className="w-8 h-8 flex items-center justify-center" style={{ color: 'var(--ink-2)' }}>‹</button>
-        <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+        <div className="text-sm font-semibold text-center" style={{ color: 'var(--ink)' }}>
           {days[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} –{' '}
           {days[6].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+          {weekHours > 0 && (
+            <span className="block text-[10px] font-medium" style={{ color: 'var(--ink-3)' }}>
+              💼 {formatHeures(weekHours)} de travail cette semaine
+            </span>
+          )}
         </div>
-        <button onClick={() => setWeekStart(w => addDays(w, 7))} className="w-8 h-8 flex items-center justify-center" style={{ color: 'var(--ink-2)' }}>›</button>
+        <div className="flex items-center">
+          <button
+            onClick={() => setWorkModal({})}
+            className="w-8 h-8 flex items-center justify-center btn-press"
+            title="Horaires de travail"
+            style={{ fontSize: 14 }}
+          >
+            💼
+          </button>
+          <button onClick={() => setWeekStart(w => addDays(w, 7))} className="w-8 h-8 flex items-center justify-center" style={{ color: 'var(--ink-2)' }}>›</button>
+        </div>
       </div>
+
+      {/* Invite à renseigner ses horaires (une fois le planning vide) */}
+      {!hasWorkSchedule(travail) && (
+        <button
+          onClick={() => setWorkModal({})}
+          className="mx-4 mt-2 rounded-xl px-4 py-2 text-left btn-press"
+          style={{ background: 'var(--surface)', border: '1px dashed var(--line)' }}
+        >
+          <p className="text-xs font-medium" style={{ color: 'var(--ink-2)' }}>
+            💼 Renseigne tes horaires de travail : ils s'afficheront ici chaque semaine automatiquement.
+          </p>
+        </button>
+      )}
 
       {/* Day headers */}
       <div className="flex" style={{ paddingLeft: 40, background: 'var(--surface)', borderBottom: '1px solid var(--line)' }}>
@@ -134,9 +193,11 @@ export default function Agenda() {
 
           {/* Day columns */}
           {days.map(d => {
+            const dateStr = formatDate(d);
             const events = eventsForDay(d);
+            const work = workBlockForDate(travail, dateStr);
             return (
-              <div key={formatDate(d)} className="flex-1 relative" style={{ borderLeft: '1px solid var(--line-2)' }}>
+              <div key={dateStr} className="flex-1 relative" style={{ borderLeft: '1px solid var(--line-2)' }}>
                 {HOURS.map(h => (
                   <div
                     key={h}
@@ -145,6 +206,15 @@ export default function Agenda() {
                     onClick={() => openNew(d, h)}
                   />
                 ))}
+                {work && (
+                  <WorkBlock
+                    work={work}
+                    onClick={() => setWorkModal({
+                      focusDate: dateStr,
+                      focusLabel: d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
+                    })}
+                  />
+                )}
                 {events.map(event => (
                   <EventBlock key={event.id} event={event} onClick={openEdit} />
                 ))}
@@ -237,6 +307,16 @@ export default function Agenda() {
           </label>
         </div>
       </Modal>
+
+      {/* Horaires de travail (semaine type + exception du jour cliqué) */}
+      <WorkScheduleModal
+        open={workModal !== null}
+        onClose={() => setWorkModal(null)}
+        travail={travail}
+        setTravail={setTravail}
+        focusDate={workModal?.focusDate}
+        focusLabel={workModal?.focusLabel}
+      />
     </div>
   );
 }

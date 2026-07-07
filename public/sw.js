@@ -1,5 +1,5 @@
 // Increment CACHE_VERSION on each deploy to force SW update
-const CACHE_VERSION = 'frontkick-v8';
+const CACHE_VERSION = 'frontkick-v9';
 
 // ── Install: pre-cache the shell ─────────────────────────────────────────────
 self.addEventListener('install', (event) => {
