@@ -209,7 +209,8 @@ function SetupCard({ onSave }) {
           <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Clé API Perplexity</p>
         </div>
         <p className="text-xs leading-relaxed mb-3" style={{ color: 'var(--ink-3)' }}>
-          Le coach IA utilise Perplexity Sonar (~$1 / million de tokens).
+          L'assistant IA (actions rapides ici + revue hebdo automatique dans
+          Progression) utilise Perplexity Sonar (~$1 / million de tokens).
           Génère ta clé sur <span style={{ color: 'var(--red)', fontWeight: 600 }}>perplexity.ai/settings/api</span>,
           puis colle-la ici.
         </p>
@@ -231,7 +232,7 @@ function SetupCard({ onSave }) {
           className="w-full py-2.5 rounded-xl font-semibold text-sm text-white btn-press"
           style={{ background: 'var(--red)', opacity: key.trim() ? 1 : 0.4 }}
         >
-          Activer le Coach principal
+          Activer l'assistant IA
         </button>
       </div>
       <p className="text-xs text-center" style={{ color: 'var(--ink-3)' }}>
@@ -336,12 +337,12 @@ export default function Coach() {
       <div className="flex items-center justify-between px-4 pt-safe-or-4 pb-3" style={{ borderBottom: '1px solid var(--line)' }}>
         <div className="flex items-center gap-2">
           <Bot size={20} style={{ color: 'var(--red)' }} />
-          <p className="text-base font-bold font-display" style={{ color: 'var(--ink)' }}>Coach principal</p>
+          <p className="text-base font-bold font-display" style={{ color: 'var(--ink)' }}>Assistant IA</p>
         </div>
         {apiKey && (
           <button
             onClick={() => {
-              if (window.confirm('Effacer la clé API et réinitialiser le coach ?')) {
+              if (window.confirm("Effacer la clé API et réinitialiser l'assistant ?")) {
                 localStorage.removeItem(API_KEY_STORAGE);
                 localStorage.removeItem(SESSION_KEY);
                 setApiKey('');
