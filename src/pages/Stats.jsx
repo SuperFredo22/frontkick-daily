@@ -21,6 +21,7 @@ import { Check, Lock as LockIcon, Palette, BadgeCheck } from 'lucide-react';
 import Card from '../components/Card';
 import Modal from '../components/Modal';
 import Jalons from '../components/Jalons';
+import RevueHebdo from '../components/RevueHebdo';
 
 function StatBox({ label, value, sub, color }) {
   return (
@@ -250,6 +251,9 @@ export default function Stats() {
 
       {/* Combatant hero */}
       <ProgressionHero prog={prog} />
+
+      {/* Revue hebdo générée automatiquement */}
+      <RevueHebdo />
 
       {/* Objectifs & jalons */}
       <Jalons />

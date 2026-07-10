@@ -34,7 +34,7 @@ useStorage  ──►  useJournal / useBanques / useAgenda / useProjets / useJal
 |--------------|-------------------------------------------------------------|
 | Aujourdhui   | Cœur du jour : missions suggérées, habitudes, actions, HUD, horaires de travail du jour, relances prospects |
 | Agenda       | Calendrier hebdo + RDV (récurrents) + blocs travail dérivés des horaires |
-| Stats        | Graphiques (Recharts), jalons, badges                       |
+| Stats        | Graphiques (Recharts), jalons, badges, revue hebdo IA        |
 | Banques      | Gestion des « banques » de contenu (TikTok, FightFocus, …), projets et prospects |
 | Coach        | Actions IA à un tap (plan du jour, séance, idées, relances, bilan) + chat (Perplexity via proxy serverless) |
 
@@ -81,6 +81,15 @@ réponses créent des données dans l'app au lieu de rester du texte.
 Note : l'ancienne carte « Notifications push » a été retirée (le workflow
 cron côté serveur a été supprimé ; `api/cron.js`/`api/subscribe.js` restent
 des endpoints orphelins sans appelant).
+
+**Revue hebdo automatique** (`utils/revueHebdo.js` + `components/RevueHebdo.jsx`,
+affichée dans Stats) : à l'ouverture de Progression, si la dernière semaine
+complète (lun→dim) n'a pas encore sa revue et qu'une clé API est configurée,
+une analyse écrite se génère toute seule (bilan / vigilance / 3 objectifs)
+depuis les journaux de la semaine, avec comparaison à la semaine précédente.
+Persistée dans `fk_revues_hebdo` (12 max, historique consultable) ; garde-fou
+d'une tentative auto par 10 min (`fk_revue_attempt`) pour ne pas marteler
+l'API en cas d'erreur. Aucun appel sans clé configurée.
 
 ### Safe areas (PWA iOS)
 
