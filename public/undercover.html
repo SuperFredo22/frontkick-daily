@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E0A16">
+<meta name="description" content="Le Mot Volé : le jeu de l'imposteur (Undercover) en français, sur un seul téléphone. Nombre de joueurs et thèmes modulables, plus un mode libre aléatoire.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Le Mot Volé">
+</head>
+<body>
+<title>Le Mot Volé</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500;0,6..96,700;1,6..96,500&family=Familjen+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+<style>
+  :root {
+    --ink: #0E0A16;
+    --surface: #191225;
+    --raised: #221933;
+    --line: #362A4A;
+    --text: #EFE6DA;
+    --muted: #A091B4;
+    --brass: #D9A441;
+    --brass-deep: #9C7020;
+    --parchment: #F2E7D3;
+    --rose: #E0687C;
+    --mint: #6FC5A3;
+    --radius: 14px;
+    --step: clamp(14px, 3.4vw, 17px);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    background-image:
+      radial-gradient(120% 70% at 50% -10%, #2A1B3E 0%, rgba(42,27,62,0) 62%),
+      radial-gradient(90% 50% at 100% 105%, #1B1430 0%, rgba(27,20,48,0) 70%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
+    font-size: var(--step);
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .app {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 22px 18px 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    min-height: 100dvh;
+  }
+
+  .masthead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+
+  .wordmark {
+    font-family: "Bodoni Moda", Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(26px, 7.5vw, 36px);
+    letter-spacing: .01em;
+    margin: 0;
+    line-height: 1;
+  }
+  .wordmark em { font-style: italic; color: var(--brass); }
+
+  .tag {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  main { display: flex; flex-direction: column; gap: 18px; flex: 1; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  h2 {
+    font-family: "Bodoni Moda", Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(21px, 5.6vw, 27px);
+    margin: 0;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+  h3 { font-size: 1rem; margin: 0; font-weight: 600; }
+  p { margin: 0; }
+  .muted { color: var(--muted); }
+  .lede { color: var(--muted); max-width: 46ch; }
+
+  .label {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .btn {
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    padding: 14px 18px;
+    font: inherit;
+    font-weight: 600;
+    background: var(--brass);
+    color: #201503;
+    cursor: pointer;
+    text-align: center;
+    transition: transform .12s ease, filter .12s ease;
+  }
+  .btn:hover { filter: brightness(1.07); }
+  .btn:active { transform: translateY(1px); }
+  .btn[disabled] { opacity: .4; cursor: not-allowed; }
+  .btn-ghost { background: transparent; color: var(--text); border-color: var(--line); }
+  .btn-ghost:hover { background: var(--raised); filter: none; }
+  .btn-danger { background: var(--rose); color: #2A0A11; }
+  .btn-block { width: 100%; }
+  .btn-lg { padding: 17px 20px; font-size: 1.05rem; }
+
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .row-between { display: flex; align-items: center; justify-content: space-between; gap: 6px 14px; flex-wrap: wrap; }
+
+  /* Stepper */
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper button {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--raised);
+    color: var(--text);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .stepper button[disabled] { opacity: .35; cursor: not-allowed; }
+  .stepper .value {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-size: 24px;
+    font-variant-numeric: tabular-nums;
+    min-width: 2.2ch;
+    text-align: center;
+  }
+
+  /* Champs */
+  input[type="text"] {
+    width: 100%;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    font: inherit;
+    padding: 12px 14px;
+  }
+  input[type="text"]::placeholder { color: #6C5F80; }
+
+  .names { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .name-field { display: flex; align-items: center; gap: 8px; }
+  .name-field .num {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--muted);
+    width: 2ch;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Thèmes */
+  .themes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    appearance: none;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 9px 14px;
+    font: inherit;
+    font-size: .92rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
+  }
+  .chip .n {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--brass);
+    border-color: var(--brass);
+    color: #201503;
+  }
+  .chip[aria-pressed="true"] .n { color: #6B4C08; }
+  .chip.wild { border-style: dashed; border-color: var(--brass-deep); }
+
+  /* Interrupteur */
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer; }
+  .switch input { position: absolute; opacity: 0; pointer-events: none; }
+  .track {
+    width: 50px; height: 29px; border-radius: 999px;
+    background: var(--raised); border: 1px solid var(--line);
+    position: relative; flex: none; transition: background .15s ease;
+  }
+  .track::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 21px; height: 21px; border-radius: 50%;
+    background: var(--muted); transition: transform .15s ease, background .15s ease;
+  }
+  .switch input:checked + .track { background: var(--brass-deep); border-color: var(--brass); }
+  .switch input:checked + .track::after { transform: translateX(21px); background: var(--parchment); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--brass); outline-offset: 3px; }
+
+  /* Carte à révéler */
+  .card-shell { perspective: 1200px; }
+  .card {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    max-height: 58dvh;
+    transform-style: preserve-3d;
+    transition: transform .55s cubic-bezier(.2,.7,.25,1);
+    cursor: pointer;
+    border: 0;
+    padding: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+  }
+  .card.flipped { transform: rotateY(180deg); }
+  .face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 26px;
+    text-align: center;
+  }
+  .face-back {
+    background:
+      repeating-linear-gradient(45deg, rgba(217,164,65,.09) 0 8px, rgba(217,164,65,0) 8px 16px),
+      var(--raised);
+    border: 1px solid var(--brass-deep);
+    color: var(--muted);
+  }
+  .face-back .seal {
+    font-family: "Bodoni Moda", Georgia, serif;
+    font-size: 60px;
+    color: var(--brass);
+    line-height: 1;
+  }
+  .face-front {
+    transform: rotateY(180deg);
+    background: var(--parchment);
+    border: 1px solid #C9B48C;
+    color: #241A0C;
+  }
+  .face-front .word {
+    font-family: "Bodoni Moda", Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(30px, 10vw, 46px);
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+  .face-front .role-note { font-size: .9rem; color: #6B5B41; }
+  .face-front.white .word { font-style: italic; }
+
+  /* Joueurs */
+  .players { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .player-btn {
+    appearance: none;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    color: var(--text);
+    font: inherit;
+    padding: 13px 14px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .player-btn:hover { border-color: var(--brass-deep); }
+  .player-btn .idx {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: .12em;
+    color: var(--muted);
+  }
+  .player-btn.out { opacity: .45; }
+
+  .order-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .order-list li {
+    list-style: none;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-size: .88rem;
+  }
+  .order-list li:first-child { border-color: var(--brass); color: var(--brass); }
+  ul.order-list { margin: 0; padding: 0; }
+
+  .verdict {
+    border-radius: var(--radius);
+    padding: 18px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+  .verdict .role {
+    font-family: "Bodoni Moda", Georgia, serif;
+    font-size: clamp(24px, 7vw, 32px);
+    font-weight: 700;
+  }
+  .verdict.civil { border-color: rgba(111,197,163,.5); }
+  .verdict.civil .role { color: var(--mint); }
+  .verdict.impostor { border-color: rgba(224,104,124,.5); }
+  .verdict.impostor .role { color: var(--rose); }
+
+  .roster { display: flex; flex-direction: column; gap: 8px; }
+  .roster-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 11px 13px;
+    border: 1px solid var(--line);
+    border-left-width: 4px;
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  .roster-row.civil { border-left-color: var(--mint); }
+  .roster-row.undercover { border-left-color: var(--rose); }
+  .roster-row.mrwhite { border-left-color: var(--parchment); }
+  .roster-row .who { display: flex; flex-direction: column; }
+  .roster-row .role-name { font-size: .8rem; color: var(--muted); }
+  .roster-row .word { font-family: "Bodoni Moda", Georgia, serif; font-size: 1.1rem; }
+
+  .banner {
+    border-radius: var(--radius);
+    padding: 22px 18px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .banner.civils { background: linear-gradient(160deg, rgba(111,197,163,.18), rgba(111,197,163,.04)); border: 1px solid rgba(111,197,163,.45); }
+  .banner.impostors { background: linear-gradient(160deg, rgba(224,104,124,.18), rgba(224,104,124,.04)); border: 1px solid rgba(224,104,124,.45); }
+  .banner h2 { font-size: clamp(26px, 8vw, 36px); }
+
+  .rules { display: flex; flex-direction: column; gap: 10px; }
+  .rules div { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; }
+  .rules .k {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--brass);
+    padding-top: 2px;
+  }
+
+  .foot { text-align: center; font-size: .82rem; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+</style>
+
+<div class="app">
+  <header class="masthead">
+    <h1 class="wordmark">Le Mot <em>Volé</em></h1>
+    <span class="tag" id="tag">Undercover</span>
+  </header>
+  <main id="screen"></main>
+  <p class="foot muted">Un téléphone, plusieurs menteurs. Passez l'appareil, jamais le regard.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var THEMES = [
+    { id: "anime", name: "Animé & Manga", pairs: [
+      ["Naruto", "Sasuke"], ["Son Goku", "Vegeta"], ["Luffy", "Zoro"], ["Ninja", "Samouraï"],
+      ["One Piece", "Fairy Tail"], ["Death Note", "Code Geass"], ["Titan", "Kaiju"],
+      ["Pokémon", "Digimon"], ["Sailor Moon", "Sakura"], ["Studio Ghibli", "Makoto Shinkai"],
+      ["Totoro", "Ponyo"], ["Dragon Ball", "Saint Seiya"], ["Nezuko", "Tanjiro"],
+      ["Levi", "Eren"], ["Manga", "Webtoon"], ["Cosplay", "Convention"],
+      ["Jujutsu Kaisen", "Bleach"], ["Kamehameha", "Rasengan"]
+    ]},
+    { id: "jeuxvideo", name: "Jeux vidéo", pairs: [
+      ["Mario", "Luigi"], ["Zelda", "Link"], ["Minecraft", "Roblox"], ["Fortnite", "PUBG"],
+      ["Manette", "Clavier"], ["Sonic", "Crash Bandicoot"], ["Call of Duty", "Battlefield"],
+      ["FIFA", "PES"], ["GTA", "Watch Dogs"], ["Console", "PC gamer"],
+      ["Boss final", "Mini-boss"], ["Speedrun", "Let's play"], ["Among Us", "Fall Guys"],
+      ["Elden Ring", "Dark Souls"], ["Steam", "Epic Games"], ["Nintendo Switch", "PlayStation"],
+      ["Mario Kart", "Rocket League"], ["Loot", "Butin"]
+    ]},
+    { id: "nature", name: "Nature", pairs: [
+      ["Montagne", "Colline"], ["Océan", "Mer"], ["Forêt", "Jungle"], ["Rivière", "Fleuve"],
+      ["Cascade", "Torrent"], ["Neige", "Grêle"], ["Orage", "Tempête"],
+      ["Coucher de soleil", "Aurore"], ["Désert", "Savane"], ["Volcan", "Geyser"],
+      ["Lac", "Étang"], ["Sapin", "Chêne"], ["Rose", "Tulipe"], ["Arc-en-ciel", "Mirage"],
+      ["Brouillard", "Nuage"], ["Sable", "Poussière"], ["Grotte", "Canyon"], ["Marée", "Vague"]
+    ]},
+    { id: "nourriture", name: "Nourriture", pairs: [
+      ["Pizza", "Quiche"], ["Burger", "Sandwich"], ["Crêpe", "Pancake"], ["Sushi", "Maki"],
+      ["Chocolat", "Caramel"], ["Café", "Thé"], ["Frites", "Chips"], ["Glace", "Sorbet"],
+      ["Pain", "Brioche"], ["Fromage", "Beurre"], ["Pâtes", "Nouilles"], ["Soupe", "Bouillon"],
+      ["Kebab", "Tacos"], ["Miel", "Sirop d'érable"], ["Ketchup", "Mayonnaise"],
+      ["Baguette", "Croissant"], ["Barbecue", "Raclette"], ["Citron", "Vinaigre"]
+    ]},
+    { id: "sport", name: "Sport", pairs: [
+      ["Football", "Futsal"], ["Basket", "Handball"], ["Boxe", "MMA"], ["Tennis", "Badminton"],
+      ["Marathon", "Sprint"], ["Natation", "Plongeon"], ["Ski", "Snowboard"],
+      ["Vélo", "Trottinette"], ["Musculation", "Crossfit"], ["Judo", "Karaté"],
+      ["Golf", "Mini-golf"], ["Rugby", "Football américain"], ["Arbitre", "Entraîneur"],
+      ["Stade", "Gymnase"], ["Escalade", "Randonnée"], ["Corde à sauter", "Tapis de course"],
+      ["Médaille", "Trophée"], ["Échauffement", "Étirement"]
+    ]},
+    { id: "cinema", name: "Cinéma & Séries", pairs: [
+      ["Titanic", "Avatar"], ["Batman", "Superman"], ["Star Wars", "Star Trek"],
+      ["Harry Potter", "Le Seigneur des Anneaux"], ["Netflix", "Prime Video"],
+      ["Cinéma", "Théâtre"], ["Zombie", "Vampire"], ["Comédie", "Parodie"],
+      ["Réalisateur", "Producteur"], ["Oscar", "César"], ["Générique", "Bande-annonce"],
+      ["Squid Game", "Alice in Borderland"], ["Marvel", "DC"], ["Série", "Film"],
+      ["Doublage", "Sous-titres"], ["Acteur", "Figurant"], ["Popcorn", "Barbe à papa"],
+      ["Cascadeur", "Doublure"]
+    ]},
+    { id: "musique", name: "Musique", pairs: [
+      ["Guitare", "Ukulélé"], ["Piano", "Orgue"], ["Rap", "Slam"], ["Concert", "Festival"],
+      ["Chanteur", "Choriste"], ["Batterie", "Percussions"], ["Casque", "Écouteurs"],
+      ["Karaoké", "Playback"], ["Album", "Mixtape"], ["DJ", "Producteur"],
+      ["Rock", "Métal"], ["Violon", "Alto"], ["Refrain", "Couplet"], ["Spotify", "Deezer"],
+      ["Clip", "Live"], ["Basse", "Contrebasse"], ["Micro", "Enceinte"], ["Chorale", "Fanfare"]
+    ]},
+    { id: "voyage", name: "Voyage & Lieux", pairs: [
+      ["Paris", "Rome"], ["Plage", "Piscine"], ["Avion", "Train"], ["Valise", "Sac à dos"],
+      ["Hôtel", "Auberge"], ["Passeport", "Carte d'identité"], ["Aéroport", "Gare"],
+      ["Camping", "Bivouac"], ["Croisière", "Ferry"], ["Musée", "Galerie"],
+      ["Route", "Autoroute"], ["Boussole", "GPS"], ["Japon", "Corée du Sud"],
+      ["Souvenir", "Carte postale"], ["Tour Eiffel", "Statue de la Liberté"],
+      ["Randonnée", "Balade"], ["Douane", "Frontière"], ["Décalage horaire", "Insomnie"]
+    ]},
+    { id: "animaux", name: "Animaux", pairs: [
+      ["Chien", "Loup"], ["Chat", "Lynx"], ["Lion", "Tigre"], ["Dauphin", "Requin"],
+      ["Aigle", "Faucon"], ["Serpent", "Anguille"], ["Cheval", "Âne"], ["Abeille", "Guêpe"],
+      ["Pingouin", "Manchot"], ["Grenouille", "Crapaud"], ["Tortue", "Escargot"],
+      ["Papillon", "Libellule"], ["Éléphant", "Rhinocéros"], ["Singe", "Gorille"],
+      ["Vache", "Bison"], ["Poule", "Canard"], ["Hibou", "Chouette"], ["Renard", "Chacal"]
+    ]},
+    { id: "objets", name: "Objets du quotidien", pairs: [
+      ["Téléphone", "Tablette"], ["Brosse à dents", "Peigne"], ["Parapluie", "Casquette"],
+      ["Clés", "Badge"], ["Miroir", "Fenêtre"], ["Chaise", "Tabouret"], ["Frigo", "Congélateur"],
+      ["Micro-ondes", "Four"], ["Stylo", "Crayon"], ["Portefeuille", "Trousse"],
+      ["Oreiller", "Couverture"], ["Lampe", "Bougie"], ["Ciseaux", "Cutter"],
+      ["Balai", "Aspirateur"], ["Montre", "Réveil"], ["Sac à main", "Cabas"],
+      ["Chargeur", "Batterie externe"], ["Serviette", "Nappe"]
+    ]}
+  ];
+
+  var WILD = "libre";
+
+  var ROLE_LABEL = { civil: "Civil", undercover: "Undercover", mrwhite: "Mr White" };
+
+  var state = {
+    phase: "home",
+    count: 5,
+    names: ["Joueur 1", "Joueur 2", "Joueur 3", "Joueur 4", "Joueur 5"],
+    themeId: WILD,
+    undercovers: 1,
+    mrWhite: false,
+    players: [],
+    themeUsed: null,
+    civilWord: "",
+    undercoverWord: "",
+    dealIndex: 0,
+    dealRevealed: false,
+    round: 1,
+    speakingOrder: [],
+    pending: null,
+    lastOut: null,
+    winner: null
+  };
+
+  var screen = document.getElementById("screen");
+  var tag = document.getElementById("tag");
+
+  // ── Utilitaires ────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function rnd(n) { return Math.floor(Math.random() * n); }
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = rnd(i + 1);
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function normalize(s) {
+    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  }
+  function maxImpostors(n) { return Math.max(1, Math.ceil(n / 2) - 1); }
+  function maxUndercovers() { return Math.max(1, maxImpostors(state.count) - (state.mrWhite ? 1 : 0)); }
+  function mrWhiteAllowed() { return maxImpostors(state.count) >= 2; }
+  function alive() { return state.players.filter(function (p) { return p.alive; }); }
+  function themeById(id) {
+    for (var i = 0; i < THEMES.length; i++) if (THEMES[i].id === id) return THEMES[i];
+    return null;
+  }
+  function playerName(i) { return (state.names[i] || "").trim() || "Joueur " + (i + 1); }
+
+  function save() {
+    try {
+      localStorage.setItem("motvole", JSON.stringify({
+        count: state.count, names: state.names, themeId: state.themeId,
+        undercovers: state.undercovers, mrWhite: state.mrWhite
+      }));
+    } catch (e) { /* stockage indisponible : on continue */ }
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem("motvole");
+      if (!raw) return;
+      var d = JSON.parse(raw);
+      if (typeof d.count === "number" && d.count >= 3 && d.count <= 20) state.count = d.count;
+      if (Array.isArray(d.names)) state.names = d.names.slice(0, 20).map(String);
+      if (typeof d.themeId === "string") state.themeId = d.themeId;
+      if (typeof d.mrWhite === "boolean") state.mrWhite = d.mrWhite;
+      if (typeof d.undercovers === "number") state.undercovers = d.undercovers;
+    } catch (e) { /* données illisibles : réglages par défaut */ }
+    clampConfig();
+  }
+  function clampConfig() {
+    while (state.names.length < state.count) state.names.push("Joueur " + (state.names.length + 1));
+    if (!mrWhiteAllowed()) state.mrWhite = false;
+    if (state.undercovers > maxUndercovers()) state.undercovers = maxUndercovers();
+    if (state.undercovers < 1) state.undercovers = 1;
+  }
+
+  // ── Distribution ───────────────────────────────────────────────────────────
+  function startGame() {
+    clampConfig();
+    var theme = state.themeId === WILD ? THEMES[rnd(THEMES.length)] : themeById(state.themeId);
+    if (!theme) theme = THEMES[rnd(THEMES.length)];
+    var pair = theme.pairs[rnd(theme.pairs.length)];
+    var flip = rnd(2) === 1;
+    state.themeUsed = theme;
+    state.civilWord = flip ? pair[1] : pair[0];
+    state.undercoverWord = flip ? pair[0] : pair[1];
+
+    var roles = [];
+    for (var u = 0; u < state.undercovers; u++) roles.push("undercover");
+    if (state.mrWhite) roles.push("mrwhite");
+    while (roles.length < state.count) roles.push("civil");
+    roles = shuffle(roles);
+
+    state.players = [];
+    for (var i = 0; i < state.count; i++) {
+      state.players.push({
+        id: i,
+        name: playerName(i),
+        role: roles[i],
+        word: roles[i] === "civil" ? state.civilWord : (roles[i] === "undercover" ? state.undercoverWord : null),
+        alive: true
+      });
+    }
+    state.dealIndex = 0;
+    state.dealRevealed = false;
+    state.round = 1;
+    state.pending = null;
+    state.lastOut = null;
+    state.winner = null;
+    state.dealOrder = shuffle(state.players.map(function (p) { return p.id; }));
+    state.phase = "deal";
+    save();
+    render();
+  }
+
+  function newRoundOrder() {
+    state.speakingOrder = shuffle(alive().map(function (p) { return p.name; }));
+  }
+
+  function checkEnd() {
+    var a = alive();
+    var imps = a.filter(function (p) { return p.role !== "civil"; }).length;
+    var civs = a.length - imps;
+    if (imps === 0) { state.winner = "civils"; state.phase = "end"; return true; }
+    if (imps >= civs) { state.winner = "impostors"; state.phase = "end"; return true; }
+    return false;
+  }
+
+  // ── Écrans ─────────────────────────────────────────────────────────────────
+  function viewHome() {
+    return '' +
+      '<section class="panel">' +
+        '<h2>Tout le monde a un mot. Sauf ceux qui mentent.</h2>' +
+        '<p class="lede">Les civils partagent le même mot secret. Les undercover en ont un voisin, mais différent. Mr White, lui, n\'a rien : il improvise. Décrivez votre mot en un indice, puis éliminez un joueur par tour.</p>' +
+        '<button class="btn btn-lg btn-block" data-action="setup">Créer une partie</button>' +
+      '</section>' +
+      '<section class="panel">' +
+        '<span class="label">Le déroulé</span>' +
+        '<div class="rules">' +
+          '<div><span class="k">01</span><p>Chacun regarde sa carte en secret, puis passe le téléphone.</p></div>' +
+          '<div><span class="k">02</span><p>À tour de rôle, un seul mot ou une courte phrase pour décrire son mot. Ni trop précis, ni trop vague.</p></div>' +
+          '<div><span class="k">03</span><p>On débat, on vote, on élimine. L\'app révèle le rôle du joueur sorti.</p></div>' +
+          '<div><span class="k">04</span><p>Les civils gagnent en sortant tous les imposteurs. Les imposteurs gagnent dès qu\'ils égalent les civils. Mr White éliminé peut voler la victoire en devinant le mot.</p></div>' +
+        '</div>' +
+      '</section>';
+  }
+
+  function viewSetup() {
+    clampConfig();
+    var namesHtml = "";
+    for (var i = 0; i < state.count; i++) {
+      namesHtml += '<div class="name-field"><span class="num">' + (i + 1) + '</span>' +
+        '<input type="text" data-name-index="' + i + '" value="' + esc(state.names[i] || "") + '" ' +
+        'placeholder="Joueur ' + (i + 1) + '" maxlength="14" autocomplete="off" aria-label="Nom du joueur ' + (i + 1) + '"></div>';
+    }
+
+    var chips = '<button class="chip wild" data-theme="' + WILD + '" aria-pressed="' + (state.themeId === WILD) + '">Mode libre<span class="n">aléatoire</span></button>';
+    THEMES.forEach(function (t) {
+      chips += '<button class="chip" data-theme="' + t.id + '" aria-pressed="' + (state.themeId === t.id) + '">' +
+        esc(t.name) + '<span class="n">' + t.pairs.length + '</span></button>';
+    });
+
+    var mwNote = mrWhiteAllowed() ? "Sans mot, il doit tout deviner." : "Disponible à partir de 5 joueurs.";
+
+    return '' +
+      '<section class="panel">' +
+        '<div class="row-between"><span class="label">Joueurs</span>' +
+          '<div class="stepper">' +
+            '<button data-action="count-" ' + (state.count <= 3 ? "disabled" : "") + ' aria-label="Retirer un joueur">−</button>' +
+            '<span class="value">' + state.count + '</span>' +
+            '<button data-action="count+" ' + (state.count >= 20 ? "disabled" : "") + ' aria-label="Ajouter un joueur">+</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="names">' + namesHtml + '</div>' +
+      '</section>' +
+
+      '<section class="panel">' +
+        '<span class="label">Thème</span>' +
+        '<div class="themes">' + chips + '</div>' +
+        '<p class="muted" style="font-size:.88rem">' +
+          (state.themeId === WILD ? "Le thème sera tiré au hasard parmi les " + THEMES.length + " catégories, sans que personne ne le sache." : "Tous les mots viendront de cette catégorie.") +
+        '</p>' +
+      '</section>' +
+
+      '<section class="panel">' +
+        '<div class="row-between"><div><span class="label">Undercover</span><p class="muted" style="font-size:.88rem">Mot voisin, mission : se fondre dans la masse.</p></div>' +
+          '<div class="stepper">' +
+            '<button data-action="uc-" ' + (state.undercovers <= 1 ? "disabled" : "") + ' aria-label="Moins d\'undercover">−</button>' +
+            '<span class="value">' + state.undercovers + '</span>' +
+            '<button data-action="uc+" ' + (state.undercovers >= maxUndercovers() ? "disabled" : "") + ' aria-label="Plus d\'undercover">+</button>' +
+          '</div>' +
+        '</div>' +
+        '<label class="switch">' +
+          '<span><span class="label">Mr White</span><p class="muted" style="font-size:.88rem">' + mwNote + '</p></span>' +
+          '<input type="checkbox" id="mw" ' + (state.mrWhite ? "checked" : "") + ' ' + (mrWhiteAllowed() ? "" : "disabled") + '><span class="track"></span>' +
+        '</label>' +
+      '</section>' +
+
+      '<div class="stack">' +
+        '<button class="btn btn-lg btn-block" data-action="start">Distribuer les cartes</button>' +
+        '<button class="btn btn-ghost btn-block" data-action="home">Retour</button>' +
+      '</div>';
+  }
+
+  function viewDeal() {
+    var id = state.dealOrder[state.dealIndex];
+    var p = state.players[id];
+    var left = state.count - state.dealIndex;
+
+    if (!state.dealRevealed) {
+      return '' +
+        '<section class="panel" style="text-align:center">' +
+          '<span class="label">Carte ' + (state.dealIndex + 1) + ' sur ' + state.count + '</span>' +
+          '<h2>Passe le téléphone à ' + esc(p.name) + '</h2>' +
+          '<p class="lede" style="margin:0 auto">Personne d\'autre ne doit voir l\'écran.</p>' +
+        '</section>' +
+        '<div class="card-shell">' +
+          '<button class="card" data-action="reveal" aria-label="Révéler la carte de ' + esc(p.name) + '">' +
+            '<span class="face face-back"><span class="seal">?</span><span class="label">Toucher pour révéler</span></span>' +
+            '<span class="face face-front"><span class="word">…</span></span>' +
+          '</button>' +
+        '</div>' +
+        '<p class="muted foot">Encore ' + left + ' carte' + (left > 1 ? "s" : "") + ' à distribuer.</p>';
+    }
+
+    var front;
+    if (p.role === "mrwhite") {
+      front = '<span class="face face-front white"><span class="label" style="color:#6B5B41">Aucun mot</span>' +
+        '<span class="word">Mr White</span>' +
+        '<span class="role-note">Écoute, déduis, et fais semblant d\'en être.</span></span>';
+    } else {
+      front = '<span class="face face-front"><span class="label" style="color:#6B5B41">Ton mot secret</span>' +
+        '<span class="word">' + esc(p.word) + '</span>' +
+        '<span class="role-note">Garde-le pour toi.</span></span>';
+    }
+
+    return '' +
+      '<section class="panel" style="text-align:center">' +
+        '<span class="label">' + esc(p.name) + '</span>' +
+        '<h2>Mémorise, puis referme</h2>' +
+      '</section>' +
+      '<div class="card-shell">' +
+        '<div class="card flipped">' +
+          '<span class="face face-back"><span class="seal">?</span></span>' +
+          front +
+        '</div>' +
+      '</div>' +
+      '<button class="btn btn-lg btn-block" data-action="deal-next">' +
+        (state.dealIndex + 1 < state.count ? "C\'est vu — joueur suivant" : "C\'est vu — commencer la partie") +
+      '</button>';
+  }
+
+  function viewPlay() {
+    var a = alive();
+    var orderHtml = state.speakingOrder.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join("");
+    var playersHtml = a.map(function (p) {
+      return '<button class="player-btn" data-vote="' + p.id + '">' +
+        '<span class="idx">Éliminer</span><span>' + esc(p.name) + '</span></button>';
+    }).join("");
+    var imps = a.filter(function (p) { return p.role !== "civil"; }).length;
+
+    return '' +
+      '<section class="panel">' +
+        '<div class="row-between"><span class="label">Manche ' + state.round + '</span>' +
+          '<span class="label">' + a.length + ' en jeu · ' + imps + ' imposteur' + (imps > 1 ? "s" : "") + '</span></div>' +
+        '<h2>Ordre de parole</h2>' +
+        '<ul class="order-list">' + orderHtml + '</ul>' +
+        '<p class="muted" style="font-size:.9rem">Un indice chacun, dans cet ordre. Puis débattez et votez à voix haute.</p>' +
+      '</section>' +
+      '<section class="panel">' +
+        '<span class="label">Le vote a désigné…</span>' +
+        '<div class="players">' + playersHtml + '</div>' +
+      '</section>' +
+      '<button class="btn btn-ghost btn-block" data-action="reshuffle">Retirer au sort l\'ordre de parole</button>';
+  }
+
+  function viewConfirm() {
+    var p = state.players[state.pending];
+    return '' +
+      '<section class="panel" style="text-align:center">' +
+        '<h2>Éliminer ' + esc(p.name) + ' ?</h2>' +
+        '<p class="lede" style="margin:0 auto">Son rôle sera révélé à tout le monde.</p>' +
+        '<button class="btn btn-danger btn-lg btn-block" data-action="confirm-out">Oui, il sort</button>' +
+        '<button class="btn btn-ghost btn-block" data-action="cancel-out">Annuler</button>' +
+      '</section>';
+  }
+
+  function viewResult() {
+    var p = state.lastOut;
+    var isCivil = p.role === "civil";
+    var detail;
+    if (p.role === "civil") detail = "Son mot était « " + esc(p.word) + " ».";
+    else if (p.role === "undercover") detail = "Son mot était « " + esc(p.word) + " ».";
+    else detail = "Il n\'a jamais eu de mot.";
+
+    return '' +
+      '<section class="verdict ' + (isCivil ? "civil" : "impostor") + '">' +
+        '<span class="label">' + esc(p.name) + ' est éliminé</span>' +
+        '<span class="role">' + ROLE_LABEL[p.role] + '</span>' +
+        '<p class="muted">' + detail + '</p>' +
+      '</section>' +
+      '<button class="btn btn-lg btn-block" data-action="after-result">Continuer</button>';
+  }
+
+  function viewWhiteGuess() {
+    return '' +
+      '<section class="panel">' +
+        '<span class="label">' + esc(state.lastOut.name) + ' — Mr White</span>' +
+        '<h2>Une dernière chance</h2>' +
+        '<p class="lede">Devine le mot des civils. Juste, tu gagnes la partie sur-le-champ. Faux, la partie continue sans toi.</p>' +
+        '<input type="text" id="guess" placeholder="Le mot des civils…" autocomplete="off" autocapitalize="off">' +
+        '<button class="btn btn-lg btn-block" data-action="submit-guess">Valider ma réponse</button>' +
+      '</section>';
+  }
+
+  function viewEnd() {
+    var title, sub, cls;
+    if (state.winner === "civils") { title = "Les civils l\'emportent"; sub = "Tous les imposteurs ont été démasqués."; cls = "civils"; }
+    else if (state.winner === "mrwhite") { title = "Mr White vole la victoire"; sub = "Le mot des civils a été deviné du premier coup."; cls = "impostors"; }
+    else { title = "Les imposteurs l\'emportent"; sub = "Ils sont désormais aussi nombreux que les civils."; cls = "impostors"; }
+
+    var roster = state.players.map(function (p) {
+      return '<div class="roster-row ' + p.role + '">' +
+        '<span class="who"><span>' + esc(p.name) + (p.alive ? "" : " · sorti") + '</span>' +
+        '<span class="role-name">' + ROLE_LABEL[p.role] + '</span></span>' +
+        '<span class="word">' + (p.word ? esc(p.word) : "—") + '</span></div>';
+    }).join("");
+
+    return '' +
+      '<section class="banner ' + cls + '"><h2>' + title + '</h2><p class="muted">' + sub + '</p></section>' +
+      '<section class="panel">' +
+        '<div class="row-between"><span class="label">Thème : ' + esc(state.themeUsed.name) + '</span>' +
+          '<span class="label">Manche ' + state.round + '</span></div>' +
+        '<p>Mot des civils : <strong>' + esc(state.civilWord) + '</strong> · Mot undercover : <strong>' + esc(state.undercoverWord) + '</strong></p>' +
+        '<div class="roster">' + roster + '</div>' +
+      '</section>' +
+      '<div class="stack">' +
+        '<button class="btn btn-lg btn-block" data-action="replay">Rejouer avec la même équipe</button>' +
+        '<button class="btn btn-ghost btn-block" data-action="setup">Changer les réglages</button>' +
+      '</div>';
+  }
+
+  var TAGS = { home: "Undercover", setup: "Réglages", deal: "Distribution", play: "En jeu",
+    confirm: "Vote", result: "Révélation", white: "Mr White", end: "Fin de partie" };
+
+  function render() {
+    screen.innerHTML =
+      state.phase === "home" ? viewHome() :
+      state.phase === "setup" ? viewSetup() :
+      state.phase === "deal" ? viewDeal() :
+      state.phase === "play" ? viewPlay() :
+      state.phase === "confirm" ? viewConfirm() :
+      state.phase === "result" ? viewResult() :
+      state.phase === "white" ? viewWhiteGuess() :
+      viewEnd();
+    tag.textContent = TAGS[state.phase] || "Undercover";
+    window.scrollTo(0, 0);
+    var g = document.getElementById("guess");
+    if (g) g.focus();
+  }
+
+  // ── Interactions ───────────────────────────────────────────────────────────
+  screen.addEventListener("click", function (ev) {
+    var themeBtn = ev.target.closest("[data-theme]");
+    if (themeBtn) { state.themeId = themeBtn.getAttribute("data-theme"); save(); render(); return; }
+
+    var voteBtn = ev.target.closest("[data-vote]");
+    if (voteBtn) { state.pending = Number(voteBtn.getAttribute("data-vote")); state.phase = "confirm"; render(); return; }
+
+    var el = ev.target.closest("[data-action]");
+    if (!el) return;
+    var action = el.getAttribute("data-action");
+
+    if (action === "setup") { state.phase = "setup"; render(); }
+    else if (action === "home") { state.phase = "home"; render(); }
+    else if (action === "count+") { if (state.count < 20) { state.count++; clampConfig(); save(); render(); } }
+    else if (action === "count-") { if (state.count > 3) { state.count--; clampConfig(); save(); render(); } }
+    else if (action === "uc+") { if (state.undercovers < maxUndercovers()) { state.undercovers++; save(); render(); } }
+    else if (action === "uc-") { if (state.undercovers > 1) { state.undercovers--; save(); render(); } }
+    else if (action === "start") { startGame(); }
+    else if (action === "reveal") {
+      var card = el;
+      card.classList.add("flipped");
+      var p = state.players[state.dealOrder[state.dealIndex]];
+      var front = card.querySelector(".face-front .word");
+      if (front) front.textContent = p.role === "mrwhite" ? "Mr White" : p.word;
+      state.dealRevealed = true;
+      setTimeout(render, 480);
+    }
+    else if (action === "deal-next") {
+      state.dealRevealed = false;
+      state.dealIndex++;
+      if (state.dealIndex >= state.count) { state.phase = "play"; newRoundOrder(); }
+      render();
+    }
+    else if (action === "reshuffle") { newRoundOrder(); render(); }
+    else if (action === "cancel-out") { state.pending = null; state.phase = "play"; render(); }
+    else if (action === "confirm-out") {
+      var out = state.players[state.pending];
+      out.alive = false;
+      state.lastOut = out;
+      state.pending = null;
+      state.phase = "result";
+      render();
+    }
+    else if (action === "after-result") {
+      if (state.lastOut.role === "mrwhite") { state.phase = "white"; render(); return; }
+      if (!checkEnd()) { state.round++; newRoundOrder(); state.phase = "play"; }
+      render();
+    }
+    else if (action === "submit-guess") {
+      var input = document.getElementById("guess");
+      var val = input ? input.value : "";
+      if (normalize(val) && normalize(val) === normalize(state.civilWord)) {
+        state.winner = "mrwhite";
+        state.phase = "end";
+      } else if (!checkEnd()) {
+        state.round++; newRoundOrder(); state.phase = "play";
+      }
+      render();
+    }
+    else if (action === "replay") { startGame(); }
+  });
+
+  screen.addEventListener("input", function (ev) {
+    var idx = ev.target.getAttribute && ev.target.getAttribute("data-name-index");
+    if (idx !== null && idx !== undefined) { state.names[Number(idx)] = ev.target.value; save(); }
+  });
+
+  screen.addEventListener("change", function (ev) {
+    if (ev.target.id === "mw") { state.mrWhite = ev.target.checked; clampConfig(); save(); render(); }
+  });
+
+  screen.addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" && ev.target.id === "guess") {
+      ev.preventDefault();
+      var btn = screen.querySelector('[data-action="submit-guess"]');
+      if (btn) btn.click();
+    }
+  });
+
+  load();
+  render();
+})();
+</script>
+
+</body>
+</html>

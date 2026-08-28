@@ -16,6 +16,21 @@ npm run lint      # ESLint
 npm test          # Vitest (logique pure)
 ```
 
+## Le Mot Volé (jeu de l'imposteur)
+
+Page autonome, indépendante de l'app : `public/undercover.html`, servie sur
+`/undercover.html` en dev comme en production. Un seul fichier HTML, sans
+dépendance ni build — on passe le téléphone entre joueurs.
+
+- 3 à 20 joueurs, noms libres
+- 10 thèmes (animé, jeux vidéo, nature, nourriture, sport, cinéma, musique,
+  voyage, animaux, objets) + **mode libre** qui tire le thème au hasard
+- Nombre d'undercover réglable, Mr White optionnel (dès 5 joueurs) avec sa
+  chance de deviner le mot des civils
+- Distribution carte par carte, ordre de parole tiré au sort, révélation du
+  rôle à chaque élimination, bilan complet en fin de partie
+- Derniers réglages mémorisés en localStorage
+
 ## Stack
 
 - **React 19** + **Vite 8**
